@@ -1,0 +1,720 @@
+{
+  "info": {
+    "_postman_id": "495e0de8-4b59-4ce5-ae63-a0f9091de818",
+    "name": "Tahfidz Quran Backend API",
+    "description": "REST API for the Tahfidz Quran system (see README.md). Run \"Auth > Login\" first — it stores accessToken/refreshToken as collection variables that every other request reuses via Bearer auth. Most \"create\" requests auto-capture the returned id into a collection variable (locationId, studentId, assessmentId, activityId, userId) for the requests that follow.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Fails fast on any 5xx so contract breaks are obvious in the runner.",
+          "pm.test('no server error', function () {",
+          "    pm.expect(pm.response.code).to.be.below(500);",
+          "});"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/api/v1", "type": "string" },
+    { "key": "adminIdentifier", "value": "admin@example.com", "type": "string" },
+    { "key": "adminPassword", "value": "StrongPassw0rd!", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "refreshToken", "value": "", "type": "string" },
+    { "key": "locationId", "value": "", "type": "string" },
+    { "key": "studentId", "value": "", "type": "string" },
+    { "key": "assessmentId", "value": "", "type": "string" },
+    { "key": "activityId", "value": "", "type": "string" },
+    { "key": "userId", "value": "", "type": "string" },
+    { "key": "objectKey", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set('accessToken', body.data.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', body.data.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifier\": \"{{adminIdentifier}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Login with phone number or email plus password. Returns a generic 401 for any invalid identifier/password so account existence is never revealed."
+          }
+        },
+        {
+          "name": "Refresh",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('accessToken', body.data.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', body.data.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "refresh"]
+            },
+            "description": "Rotates the refresh token: the presented token is revoked and a new access/refresh pair is issued."
+          }
+        },
+        {
+          "name": "Logout (current device)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            }
+          }
+        },
+        {
+          "name": "Logout all devices",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout-all",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout-all"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Quran",
+      "item": [
+        {
+          "name": "List all surahs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/quran/surahs",
+              "host": ["{{baseUrl}}"],
+              "path": ["quran", "surahs"]
+            },
+            "description": "Returns all 114 surahs ordered by surahNumber, with arabicName/latinName/verseCount."
+          }
+        },
+        {
+          "name": "Get surah by number",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/quran/surahs/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["quran", "surahs", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Locations",
+      "item": [
+        {
+          "name": "List locations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/locations?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["locations"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" },
+                { "key": "status", "value": "ACTIVE", "disabled": true },
+                { "key": "search", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create location",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('locationId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cabang Al-Hisan Pusat\",\n  \"address\": \"Jl. Pendidikan No. 1, Jakarta\",\n  \"latitude\": -6.2,\n  \"longitude\": 106.816666,\n  \"phone\": \"+6281234567890\",\n  \"description\": \"Cabang utama\",\n  \"organizationMembers\": [\n    { \"name\": \"Ust. Fulan\", \"roleTitle\": \"Kepala Cabang\", \"phone\": \"+6281200000000\" }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["locations"]
+            },
+            "description": "Admin only. Rejects a duplicate active location name (409)."
+          }
+        },
+        {
+          "name": "Get location by id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/locations/{{locationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["locations", "{{locationId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update location",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Cabang utama (updated)\",\n  \"status\": \"ACTIVE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/locations/{{locationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["locations", "{{locationId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete (soft) location",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/locations/{{locationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["locations", "{{locationId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users (admin)",
+      "item": [
+        {
+          "name": "List users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/users?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create user (location operator)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('userId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Ustadzah Fulanah\",\n  \"email\": \"operator1@example.com\",\n  \"password\": \"StrongPassw0rd!\",\n  \"role\": \"LOCATION_OPERATOR\",\n  \"locationIds\": [\"{{locationId}}\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            }
+          }
+        },
+        {
+          "name": "Get user by id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update user",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Ustadzah Fulanah (updated)\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Deactivate user",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}/deactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}", "deactivate"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Students",
+      "item": [
+        {
+          "name": "List students",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/students?page=1&pageSize=20&locationId={{locationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["students"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" },
+                { "key": "locationId", "value": "{{locationId}}" },
+                { "key": "name", "value": "", "disabled": true },
+                { "key": "studentCode", "value": "", "disabled": true },
+                { "key": "phone", "value": "", "disabled": true },
+                { "key": "status", "value": "ACTIVE", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create student",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('studentId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Ahmad Fulan\",\n  \"locationId\": \"{{locationId}}\",\n  \"nik\": \"3271010101010001\",\n  \"guardianName\": \"Bapak Fulan\",\n  \"address\": \"Jl. Contoh No. 2\",\n  \"studentPhone\": \"+6281200000001\",\n  \"guardianPhone\": \"+6281200000002\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/students",
+              "host": ["{{baseUrl}}"],
+              "path": ["students"]
+            },
+            "description": "Admin only. locationId must reference an active location. NIK is encrypted at rest and masked in responses."
+          }
+        },
+        {
+          "name": "Get student by id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/students/{{studentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["students", "{{studentId}}"]
+            },
+            "description": "Admin: any student. LOCATION_OPERATOR: only students in an assigned location (403 otherwise)."
+          }
+        },
+        {
+          "name": "Update student",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"guardianPhone\": \"+6281200000009\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/students/{{studentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["students", "{{studentId}}"]
+            }
+          }
+        },
+        {
+          "name": "Archive student",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/students/{{studentId}}/archive",
+              "host": ["{{baseUrl}}"],
+              "path": ["students", "{{studentId}}", "archive"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Assessments",
+      "item": [
+        {
+          "name": "List assessments for student",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/students/{{studentId}}/assessments?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["students", "{{studentId}}", "assessments"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" },
+                { "key": "assessmentType", "value": "NEW_MEMORIZATION", "disabled": true },
+                { "key": "dateFrom", "value": "2026-01-01", "disabled": true },
+                { "key": "dateTo", "value": "2026-12-31", "disabled": true }
+              ]
+            },
+            "description": "Admin or an operator assigned to the student's location."
+          }
+        },
+        {
+          "name": "Create assessment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('assessmentId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assessmentDate\": \"2026-01-15T00:00:00.000Z\",\n  \"assessmentType\": \"NEW_MEMORIZATION\",\n  \"startSurahNumber\": 1,\n  \"startVerseNumber\": 1,\n  \"endSurahNumber\": 1,\n  \"endVerseNumber\": 7,\n  \"grade\": \"MUMTAZ\",\n  \"notes\": \"Bacaan lancar, tajwid baik.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/students/{{studentId}}/assessments",
+              "host": ["{{baseUrl}}"],
+              "path": ["students", "{{studentId}}", "assessments"]
+            },
+            "description": "surahNumber must be 1-114; verseNumber must not exceed the surah's verse count; end position must not precede the start position; assessmentDate cannot be further in the future than the configured clock-skew window."
+          }
+        },
+        {
+          "name": "Get assessment by id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/assessments/{{assessmentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["assessments", "{{assessmentId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update assessment",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"grade\": \"JAYYID_JIDDAN\",\n  \"notes\": \"Perlu perbaikan makhraj sedikit.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/assessments/{{assessmentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["assessments", "{{assessmentId}}"]
+            },
+            "description": "Creates a revision/audit event; never silently overwrites the prior value."
+          }
+        },
+        {
+          "name": "Archive (delete) assessment",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/assessments/{{assessmentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["assessments", "{{assessmentId}}"]
+            },
+            "description": "Soft-delete with an audit event; admin or the assigned operator."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Activities",
+      "item": [
+        {
+          "name": "List activities for location",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/locations/{{locationId}}/activities?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["locations", "{{locationId}}", "activities"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" },
+                { "key": "dateFrom", "value": "2026-01-01", "disabled": true },
+                { "key": "dateTo", "value": "2026-12-31", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create activity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('activityId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Kegiatan Tahfidz Mingguan\",\n  \"description\": \"Setoran hafalan bersama\",\n  \"activityDate\": \"2026-01-20\",\n  \"photos\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/locations/{{locationId}}/activities",
+              "host": ["{{baseUrl}}"],
+              "path": ["locations", "{{locationId}}", "activities"]
+            },
+            "description": "Admin only. photos[].objectKey should come from Files > Presign + Complete first; this example creates the activity without photos."
+          }
+        },
+        {
+          "name": "Get activity by id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/activities/{{activityId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["activities", "{{activityId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update activity",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Setoran hafalan bersama (updated)\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/activities/{{activityId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["activities", "{{activityId}}"]
+            }
+          }
+        },
+        {
+          "name": "Archive activity",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/activities/{{activityId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["activities", "{{activityId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Location dashboard",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/locations/{{locationId}}?from=2026-01-01&to=2026-12-31&timezone=Asia/Jakarta",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "locations", "{{locationId}}"],
+              "query": [
+                { "key": "from", "value": "2026-01-01" },
+                { "key": "to", "value": "2026-12-31" },
+                { "key": "timezone", "value": "Asia/Jakarta" }
+              ]
+            },
+            "description": "from/to/timezone are optional; defaults to the last 30 days in UTC."
+          }
+        },
+        {
+          "name": "Student dashboard",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/students/{{studentId}}?from=2026-01-01&to=2026-12-31&timezone=Asia/Jakarta",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "students", "{{studentId}}"],
+              "query": [
+                { "key": "from", "value": "2026-01-01" },
+                { "key": "to", "value": "2026-12-31" },
+                { "key": "timezone", "value": "Asia/Jakarta" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Files",
+      "item": [
+        {
+          "name": "Presign upload",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('objectKey', pm.response.json().data.objectKey);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fileName\": \"activity-photo.jpg\",\n  \"mimeType\": \"image/jpeg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/files/presign",
+              "host": ["{{baseUrl}}"],
+              "path": ["files", "presign"]
+            },
+            "description": "Returns a short-lived signed uploadUrl and objectKey. Upload the file bytes directly to uploadUrl (PUT) with the same mimeType, then call Complete below."
+          }
+        },
+        {
+          "name": "Complete upload",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "Safe to retry with the same key if the request times out."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"objectKey\": \"{{objectKey}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/files/{{objectKey}}/complete",
+              "host": ["{{baseUrl}}"],
+              "path": ["files", "{{objectKey}}", "complete"]
+            },
+            "description": "Verifies the object was actually uploaded (size/MIME type) before it is referenced elsewhere (e.g. activity photos)."
+          }
+        }
+      ]
+    }
+  ]
+}

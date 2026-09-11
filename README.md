@@ -27,6 +27,10 @@ npm run dev
 
 The server listens on `PORT` (default `3000`). Health check: `GET /healthz`.
 
+A ready-to-import Postman collection covering every endpoint (with
+auto-captured IDs for a full create → read → update → archive flow) is in
+[`postman/`](postman/).
+
 ## Scripts
 
 | Script | Purpose |
