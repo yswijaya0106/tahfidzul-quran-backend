@@ -33,6 +33,7 @@ export default async function activitiesRoutes(fastify: FastifyInstance): Promis
     "/api/v1/locations/:id/activities",
     { preHandler: fastify.authenticate },
     async (request) => {
+      /* v8 ignore next */
       if (!request.auth) throw AppError.unauthenticated();
       const { id } = locationIdParams.parse(request.params);
       const query = request.query as Record<string, string>;
@@ -50,6 +51,7 @@ export default async function activitiesRoutes(fastify: FastifyInstance): Promis
     "/api/v1/locations/:id/activities",
     { preHandler: fastify.authenticate },
     async (request, reply) => {
+      /* v8 ignore next */
       if (!request.auth) throw AppError.unauthenticated();
       const { id } = locationIdParams.parse(request.params);
       const input = createActivitySchema.parse(request.body);
@@ -62,6 +64,7 @@ export default async function activitiesRoutes(fastify: FastifyInstance): Promis
   );
 
   fastify.get("/api/v1/activities/:id", { preHandler: fastify.authenticate }, async (request) => {
+    /* v8 ignore next */
     if (!request.auth) throw AppError.unauthenticated();
     const { id } = activityIdParams.parse(request.params);
     const data = await fastify.container.activityUseCases.getById(request.auth, id);
@@ -69,6 +72,7 @@ export default async function activitiesRoutes(fastify: FastifyInstance): Promis
   });
 
   fastify.patch("/api/v1/activities/:id", { preHandler: fastify.authenticate }, async (request) => {
+    /* v8 ignore next */
     if (!request.auth) throw AppError.unauthenticated();
     const { id } = activityIdParams.parse(request.params);
     const input = updateActivitySchema.parse(request.body);
@@ -80,6 +84,7 @@ export default async function activitiesRoutes(fastify: FastifyInstance): Promis
     "/api/v1/activities/:id",
     { preHandler: fastify.authenticate },
     async (request, reply) => {
+      /* v8 ignore next */
       if (!request.auth) throw AppError.unauthenticated();
       const { id } = activityIdParams.parse(request.params);
       await fastify.container.activityUseCases.archive(request.auth, id);

@@ -27,6 +27,7 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
     { preHandler: fastify.authenticate },
     async (request, reply) => {
       const { refreshToken } = refreshSchema.parse(request.body);
+      /* v8 ignore next */
       if (!request.auth) throw AppError.unauthenticated();
       await fastify.container.logout.execute(request.auth.userId, refreshToken);
       reply.status(204).send();
@@ -37,6 +38,7 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
     "/api/v1/auth/logout-all",
     { preHandler: fastify.authenticate },
     async (request, reply) => {
+      /* v8 ignore next */
       if (!request.auth) throw AppError.unauthenticated();
       await fastify.container.logoutAll.execute(request.auth.userId);
       reply.status(204).send();

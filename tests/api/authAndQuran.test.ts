@@ -86,4 +86,21 @@ describe("auth and quran API contract", () => {
     expect(response.statusCode).toBe(404);
     expect(response.json().error).toMatchObject({ code: "NOT_FOUND" });
   });
+
+  it("returns a single surah by number", async () => {
+    const loginResponse = await app.inject({
+      method: "POST",
+      url: "/api/v1/auth/login",
+      payload: { identifier: email, password },
+    });
+    const { accessToken } = loginResponse.json().data;
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/quran/surahs/1",
+      headers: { authorization: `Bearer ${accessToken}` },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().data).toMatchObject({ surahNumber: 1, latinName: "Al-Fatihah" });
+  });
 });

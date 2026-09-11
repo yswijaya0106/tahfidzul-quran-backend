@@ -7,6 +7,7 @@ import "./types";
 import { config } from "../../infrastructure/config";
 import { buildContainer, Container } from "../../infrastructure/container";
 import { errorHandler } from "./errorHandler";
+import { transportFor } from "../../infrastructure/logging/logger";
 import authenticatePlugin from "./plugins/authenticate";
 import authRoutes from "./routes/auth.routes";
 import usersRoutes from "./routes/users.routes";
@@ -23,10 +24,7 @@ export async function buildApp(container?: Container): Promise<FastifyInstance> 
   const fastify = Fastify({
     logger: {
       level: config.logLevel,
-      transport:
-        config.nodeEnv === "development"
-          ? { target: "pino-pretty", options: { colorize: true } }
-          : undefined,
+      transport: transportFor(config.nodeEnv),
       redact: {
         paths: [
           "req.headers.authorization",

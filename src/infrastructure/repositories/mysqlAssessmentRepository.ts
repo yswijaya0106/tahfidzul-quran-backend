@@ -34,8 +34,8 @@ interface RevisionRow extends RowDataPacket {
   assessment_id: string;
   changed_by_user_id: string;
   change_type: MemorizationAssessmentRevision["changeType"];
-  previous_value: string | null;
-  new_value: string;
+  previous_value: Record<string, unknown> | null;
+  new_value: Record<string, unknown>;
   created_at: Date;
 }
 
@@ -69,8 +69,8 @@ function mapRevision(row: RevisionRow): MemorizationAssessmentRevision {
     assessmentId: row.assessment_id,
     changedByUserId: row.changed_by_user_id,
     changeType: row.change_type,
-    previousValue: row.previous_value ? JSON.parse(row.previous_value) : null,
-    newValue: JSON.parse(row.new_value),
+    previousValue: row.previous_value,
+    newValue: row.new_value,
     createdAt: row.created_at.toISOString(),
   };
 }

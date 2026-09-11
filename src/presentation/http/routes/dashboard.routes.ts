@@ -18,6 +18,7 @@ export default async function dashboardRoutes(fastify: FastifyInstance): Promise
     "/api/v1/dashboard/locations/:id",
     { preHandler: fastify.authenticate },
     async (request) => {
+      /* v8 ignore next */
       if (!request.auth) throw AppError.unauthenticated();
       const { id } = idParams.parse(request.params);
       const { range, timezone } = defaultRange(request.query as Record<string, string>);
@@ -35,6 +36,7 @@ export default async function dashboardRoutes(fastify: FastifyInstance): Promise
     "/api/v1/dashboard/students/:id",
     { preHandler: fastify.authenticate },
     async (request) => {
+      /* v8 ignore next */
       if (!request.auth) throw AppError.unauthenticated();
       const { id } = idParams.parse(request.params);
       const { range, timezone } = defaultRange(request.query as Record<string, string>);

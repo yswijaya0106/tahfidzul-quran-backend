@@ -18,21 +18,21 @@ async function getAppliedMigrations(pool: ReturnType<typeof createPool>): Promis
   return new Set((rows as { id: string }[]).map((row) => row.id));
 }
 
-export async function runMigrations(): Promise<void> {
+export async function runMigrations(migrationsDir: string = MIGRATIONS_DIR): Promise<void> {
   const pool = createPool();
   try {
     await ensureMigrationsTable(pool);
     const applied = await getAppliedMigrations(pool);
 
     const files = fs
-      .readdirSync(MIGRATIONS_DIR)
+      .readdirSync(migrationsDir)
       .filter((file) => file.endsWith(".sql"))
       .sort();
 
     for (const file of files) {
       if (applied.has(file)) continue;
 
-      const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), "utf8");
+      const sql = fs.readFileSync(path.join(migrationsDir, file), "utf8");
       const connection = await pool.getConnection();
       try {
         await connection.beginTransaction();
@@ -58,6 +58,7 @@ export async function runMigrations(): Promise<void> {
   }
 }
 
+/* v8 ignore start */
 if (require.main === module) {
   runMigrations()
     .then(() => {
@@ -69,3 +70,4 @@ if (require.main === module) {
       process.exit(1);
     });
 }
+/* v8 ignore stop */

@@ -181,9 +181,14 @@ describe("IkhtibarUseCases", () => {
     const { useCase, ikhtibars } = buildUseCase([student]);
     const created = await useCase.create(admin, student.id, validInput);
 
-    const updated = await useCase.update(admin, created.id, { grade: "JAYYID", score: 70 });
+    const updated = await useCase.update(admin, created.id, {
+      grade: "JAYYID",
+      score: 70,
+      notes: "updated notes",
+    });
     expect(updated.grade).toBe("JAYYID");
     expect(updated.score).toBe(70);
+    expect(updated.notes).toBe("updated notes");
     expect(updated.juzFrom).toBe(validInput.juzFrom);
 
     const revisions = await ikhtibars.listRevisions(created.id);

@@ -21,6 +21,7 @@ export default async function filesRoutes(fastify: FastifyInstance): Promise<voi
     "/api/v1/files/presign",
     { preHandler: fastify.authenticate },
     async (request, reply) => {
+      /* v8 ignore next */
       if (!request.auth) throw AppError.unauthenticated();
       const input = presignSchema.parse(request.body);
       const data = await fastify.container.fileUseCases.presign(input);
@@ -32,6 +33,7 @@ export default async function filesRoutes(fastify: FastifyInstance): Promise<voi
     "/api/v1/files/:id/complete",
     { preHandler: fastify.authenticate },
     async (request, reply) => {
+      /* v8 ignore next */
       if (!request.auth) throw AppError.unauthenticated();
       const idempotencyKey = request.headers["idempotency-key"] as string | undefined;
       if (idempotencyKey && idempotencyCache.has(idempotencyKey)) {

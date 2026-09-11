@@ -60,6 +60,26 @@ describe("validateAssessmentRange", () => {
     ).toThrow(AppError);
   });
 
+  it("rejects a start verse number beyond the surah's verse count", () => {
+    expect(() =>
+      validateAssessmentRange(
+        { surahNumber: 1, verseNumber: 8 },
+        { surahNumber: 2, verseNumber: 1 },
+        lookup,
+      ),
+    ).toThrow(AppError);
+  });
+
+  it("rejects an unknown end surah number", () => {
+    expect(() =>
+      validateAssessmentRange(
+        { surahNumber: 1, verseNumber: 1 },
+        { surahNumber: 200, verseNumber: 1 },
+        lookup,
+      ),
+    ).toThrow(AppError);
+  });
+
   it("rejects an end position preceding the start position", () => {
     expect(() =>
       validateAssessmentRange(

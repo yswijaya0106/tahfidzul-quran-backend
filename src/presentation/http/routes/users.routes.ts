@@ -24,12 +24,23 @@ const idParams = z.object({ id: z.string().uuid() });
 
 export default async function usersRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.get("/api/v1/users", { preHandler: fastify.authenticate }, async (request) => {
+    /* v8 ignore next */
     if (!request.auth) throw AppError.unauthenticated();
-    const page = parsePageRequest(request.query as Record<string, string>);
-    return fastify.container.userUseCases.list(request.auth, {}, page);
+    const query = request.query as Record<string, string>;
+    const page = parsePageRequest(query);
+    return fastify.container.userUseCases.list(
+      request.auth,
+      {
+        role: query.role as "ADMIN" | "LOCATION_OPERATOR" | undefined,
+        isActive: query.isActive !== undefined ? query.isActive === "true" : undefined,
+        search: query.search,
+      },
+      page,
+    );
   });
 
   fastify.get("/api/v1/users/:id", { preHandler: fastify.authenticate }, async (request) => {
+    /* v8 ignore next */
     if (!request.auth) throw AppError.unauthenticated();
     const { id } = idParams.parse(request.params);
     const data = await fastify.container.userUseCases.getById(request.auth, id);
@@ -37,6 +48,7 @@ export default async function usersRoutes(fastify: FastifyInstance): Promise<voi
   });
 
   fastify.post("/api/v1/users", { preHandler: fastify.authenticate }, async (request, reply) => {
+    /* v8 ignore next */
     if (!request.auth) throw AppError.unauthenticated();
     const input = createUserSchema.parse(request.body);
     const data = await fastify.container.userUseCases.create(request.auth, input);
@@ -44,6 +56,7 @@ export default async function usersRoutes(fastify: FastifyInstance): Promise<voi
   });
 
   fastify.patch("/api/v1/users/:id", { preHandler: fastify.authenticate }, async (request) => {
+    /* v8 ignore next */
     if (!request.auth) throw AppError.unauthenticated();
     const { id } = idParams.parse(request.params);
     const input = updateUserSchema.parse(request.body);
@@ -55,6 +68,7 @@ export default async function usersRoutes(fastify: FastifyInstance): Promise<voi
     "/api/v1/users/:id/deactivate",
     { preHandler: fastify.authenticate },
     async (request, reply) => {
+      /* v8 ignore next */
       if (!request.auth) throw AppError.unauthenticated();
       const { id } = idParams.parse(request.params);
       await fastify.container.userUseCases.deactivate(request.auth, id);

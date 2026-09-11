@@ -180,4 +180,42 @@ describe("AssessmentUseCases", () => {
     const revisions = await assessments.listRevisions(created.id);
     expect(revisions.map((r) => r.changeType)).toEqual(["CREATE", "ARCHIVE"]);
   });
+
+  it("rejects create for a missing or soft-deleted student", async () => {
+    const admin: AuthContext = { userId: "admin-1", role: "ADMIN", assignedLocationIds: [] };
+    const { useCase: withMissing } = buildUseCase([student]);
+    await expect(withMissing.create(admin, "missing", validInput)).rejects.toMatchObject({
+      status: 404,
+    });
+
+    const deletedStudent = { ...student, id: "student-2", deletedAt: "2026-01-01T00:00:00.000Z" };
+    const { useCase: withDeleted } = buildUseCase([deletedStudent]);
+    await expect(withDeleted.create(admin, deletedStudent.id, validInput)).rejects.toMatchObject({
+      status: 404,
+    });
+  });
+
+  it("updates an assessment overriding grade and notes, keeping unspecified fields", async () => {
+    const { useCase } = buildUseCase([student]);
+    const admin: AuthContext = { userId: "admin-1", role: "ADMIN", assignedLocationIds: [] };
+
+    const created = await useCase.create(admin, student.id, { ...validInput, notes: "original" });
+    const updated = await useCase.update(admin, created.id, { grade: "JAYYID", notes: "updated" });
+
+    expect(updated.grade).toBe("JAYYID");
+    expect(updated.notes).toBe("updated");
+    expect(updated.startSurahNumber).toBe(validInput.startSurahNumber);
+  });
+
+  it("updates an assessment without changing grade or notes when omitted", async () => {
+    const { useCase } = buildUseCase([student]);
+    const admin: AuthContext = { userId: "admin-1", role: "ADMIN", assignedLocationIds: [] };
+
+    const created = await useCase.create(admin, student.id, { ...validInput, notes: "original" });
+    const updated = await useCase.update(admin, created.id, { endVerseNumber: 6 });
+
+    expect(updated.grade).toBe(validInput.grade);
+    expect(updated.notes).toBe("original");
+    expect(updated.endVerseNumber).toBe(6);
+  });
 });
