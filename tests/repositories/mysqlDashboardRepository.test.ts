@@ -83,6 +83,10 @@ describe("MysqlDashboardRepository", () => {
     ).toBe(true);
     expect(data.studentsWithoutRecentAssessment.some((s) => s.studentId === studentId)).toBe(false);
     expect(data.recentActivities.some((a) => a.title === "Dashboard Test Activity")).toBe(true);
+    expect(data.topStudents[0]?.studentId).toBe(studentId);
+    expect(data.topStudents[0]?.assessmentCount).toBeGreaterThanOrEqual(1);
+    expect(data.topStudents[0]?.mumtazCount).toBeGreaterThanOrEqual(1);
+    expect(data.topStudents.some((s) => s.studentId === inactiveStudentId)).toBe(false);
   });
 
   it("returns an empty distribution when there is no data in range", async () => {
@@ -93,6 +97,7 @@ describe("MysqlDashboardRepository", () => {
     );
     expect(data.assessmentCount).toBe(0);
     expect(data.latestAssessmentDate).toBeNull();
+    expect(data.topStudents).toEqual([]);
   });
 
   it("computes a student dashboard with latest assessments by type", async () => {

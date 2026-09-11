@@ -70,6 +70,24 @@ export class MysqlDashboardRepository implements DashboardRepository {
       [locationId],
     );
 
+    const [topStudentRows] = await this.pool.query<RowDataPacket[]>(
+      `SELECT
+         s.id AS student_id,
+         s.full_name,
+         s.student_code,
+         COUNT(a.id) AS assessment_count,
+         SUM(CASE WHEN a.grade = 'MUMTAZ' THEN 1 ELSE 0 END) AS mumtaz_count
+       FROM students s
+       JOIN memorization_assessments a
+         ON a.student_id = s.id AND a.deleted_at IS NULL
+         AND a.assessment_date BETWEEN ? AND ?
+       WHERE s.location_id = ? AND s.deleted_at IS NULL
+       GROUP BY s.id, s.full_name, s.student_code
+       ORDER BY assessment_count DESC, mumtaz_count DESC
+       LIMIT 10`,
+      [range.from, range.to, locationId],
+    );
+
     return {
       activeStudentCount: Number((activeCountRow as { count: number }).count),
       assessmentCount: assessmentRows.length,
@@ -89,6 +107,21 @@ export class MysqlDashboardRepository implements DashboardRepository {
         activityId: row.activity_id,
         title: row.title,
         activityDate: row.activity_date.toISOString().slice(0, 10),
+      })),
+      topStudents: (
+        topStudentRows as {
+          student_id: string;
+          full_name: string;
+          student_code: string;
+          assessment_count: number;
+          mumtaz_count: number;
+        }[]
+      ).map((row) => ({
+        studentId: row.student_id,
+        fullName: row.full_name,
+        studentCode: row.student_code,
+        assessmentCount: Number(row.assessment_count),
+        mumtazCount: Number(row.mumtaz_count),
       })),
     };
   }

@@ -5,6 +5,14 @@ export interface DateRange {
   to: string;
 }
 
+export interface TopStudent {
+  studentId: string;
+  fullName: string;
+  studentCode: string;
+  assessmentCount: number;
+  mumtazCount: number;
+}
+
 export interface LocationDashboardData {
   activeStudentCount: number;
   assessmentCount: number;
@@ -13,6 +21,8 @@ export interface LocationDashboardData {
   distributionByType: Record<AssessmentType, number>;
   studentsWithoutRecentAssessment: { studentId: string; fullName: string; studentCode: string }[];
   recentActivities: { activityId: string; title: string; activityDate: string }[];
+  /** Top 10 most active students by assessment count within the selected range. */
+  topStudents: TopStudent[];
 }
 
 export interface StudentDashboardData {
