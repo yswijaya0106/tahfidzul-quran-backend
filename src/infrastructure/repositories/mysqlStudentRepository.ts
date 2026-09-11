@@ -2,6 +2,7 @@ import { Pool, RowDataPacket } from "mysql2/promise";
 import { StudentRepository, StudentFilters } from "../../domain/repositories/studentRepository";
 import { Student, StudentDocument } from "../../domain/entities/student";
 import { ListResult, PageRequest, offsetFor } from "../../shared/pagination";
+import { toSqlDateTime } from "../db/dateTime";
 
 interface StudentRow extends RowDataPacket {
   id: string;
@@ -152,8 +153,8 @@ export class MysqlStudentRepository implements StudentRepository {
         student.studentPhone,
         student.guardianPhone,
         student.status,
-        student.createdAt,
-        student.updatedAt,
+        toSqlDateTime(student.createdAt),
+        toSqlDateTime(student.updatedAt),
       ],
     );
   }
@@ -170,8 +171,13 @@ export class MysqlStudentRepository implements StudentRepository {
       id_card_photo_object_key: patch.idCardPhotoObjectKey,
       graduation_certificate_object_key: patch.graduationCertificateObjectKey,
       status: patch.status,
-      updated_at: patch.updatedAt,
-      deleted_at: patch.deletedAt,
+      updated_at: patch.updatedAt !== undefined ? toSqlDateTime(patch.updatedAt) : undefined,
+      deleted_at:
+        patch.deletedAt !== undefined
+          ? patch.deletedAt === null
+            ? null
+            : toSqlDateTime(patch.deletedAt)
+          : undefined,
     };
 
     const fields: string[] = [];
@@ -215,7 +221,7 @@ export class MysqlStudentRepository implements StudentRepository {
         document.originalFileName,
         document.mimeType,
         document.sizeBytes,
-        document.createdAt,
+        toSqlDateTime(document.createdAt),
       ],
     );
   }

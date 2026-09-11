@@ -17,7 +17,7 @@ describe("auth and quran API contract", () => {
     pool = createPool();
 
     const hasher = new BcryptPasswordHasher();
-    const now = new Date().toISOString();
+    const now = new Date();
     await pool.query(
       `INSERT INTO users (id, full_name, email, password_hash, role, is_active, created_at, updated_at)
        VALUES (?, ?, ?, ?, 'ADMIN', 1, ?, ?)`,

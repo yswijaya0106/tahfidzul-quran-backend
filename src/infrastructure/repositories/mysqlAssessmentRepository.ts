@@ -9,6 +9,7 @@ import {
   MemorizationAssessmentRevision,
 } from "../../domain/entities/assessment";
 import { ListResult, PageRequest, offsetFor } from "../../shared/pagination";
+import { toSqlDate, toSqlDateTime } from "../db/dateTime";
 
 interface AssessmentRow extends RowDataPacket {
   id: string;
@@ -113,11 +114,11 @@ export class MysqlAssessmentRepository implements AssessmentRepository {
     }
     if (filters.dateFrom) {
       conditions.push("assessment_date >= ?");
-      params.push(filters.dateFrom);
+      params.push(toSqlDate(filters.dateFrom));
     }
     if (filters.dateTo) {
       conditions.push("assessment_date <= ?");
-      params.push(filters.dateTo);
+      params.push(toSqlDate(filters.dateTo));
     }
 
     const whereClause = conditions.join(" AND ");
@@ -150,7 +151,7 @@ export class MysqlAssessmentRepository implements AssessmentRepository {
         assessment.id,
         assessment.studentId,
         assessment.locationId,
-        assessment.assessmentDate,
+        toSqlDate(assessment.assessmentDate),
         assessment.assessmentType,
         assessment.startSurahNumber,
         assessment.startVerseNumber,
@@ -159,15 +160,16 @@ export class MysqlAssessmentRepository implements AssessmentRepository {
         assessment.grade,
         assessment.notes,
         assessment.assessorUserId,
-        assessment.createdAt,
-        assessment.updatedAt,
+        toSqlDateTime(assessment.createdAt),
+        toSqlDateTime(assessment.updatedAt),
       ],
     );
   }
 
   async update(id: string, patch: Partial<MemorizationAssessment>): Promise<void> {
     const columnMap: Record<string, unknown> = {
-      assessment_date: patch.assessmentDate,
+      assessment_date:
+        patch.assessmentDate !== undefined ? toSqlDate(patch.assessmentDate) : undefined,
       assessment_type: patch.assessmentType,
       start_surah_number: patch.startSurahNumber,
       start_verse_number: patch.startVerseNumber,
@@ -175,8 +177,13 @@ export class MysqlAssessmentRepository implements AssessmentRepository {
       end_verse_number: patch.endVerseNumber,
       grade: patch.grade,
       notes: patch.notes,
-      updated_at: patch.updatedAt,
-      deleted_at: patch.deletedAt,
+      updated_at: patch.updatedAt !== undefined ? toSqlDateTime(patch.updatedAt) : undefined,
+      deleted_at:
+        patch.deletedAt !== undefined
+          ? patch.deletedAt === null
+            ? null
+            : toSqlDateTime(patch.deletedAt)
+          : undefined,
     };
 
     const fields: string[] = [];
@@ -213,7 +220,7 @@ export class MysqlAssessmentRepository implements AssessmentRepository {
         revision.changeType,
         revision.previousValue ? JSON.stringify(revision.previousValue) : null,
         JSON.stringify(revision.newValue),
-        revision.createdAt,
+        toSqlDateTime(revision.createdAt),
       ],
     );
   }

@@ -2,6 +2,7 @@ import { Pool, RowDataPacket } from "mysql2/promise";
 import { UserRepository, UserFilters } from "../../domain/repositories/userRepository";
 import { User, UserLocationAssignment } from "../../domain/entities/user";
 import { ListResult, PageRequest, offsetFor } from "../../shared/pagination";
+import { toSqlDateTime } from "../db/dateTime";
 
 interface UserRow extends RowDataPacket {
   id: string;
@@ -95,8 +96,8 @@ export class MysqlUserRepository implements UserRepository {
         user.passwordHash,
         user.role,
         user.isActive ? 1 : 0,
-        user.createdAt,
-        user.updatedAt,
+        toSqlDateTime(user.createdAt),
+        toSqlDateTime(user.updatedAt),
       ],
     );
   }
@@ -111,8 +112,13 @@ export class MysqlUserRepository implements UserRepository {
       phone: patch.phone,
       role: patch.role,
       is_active: patch.isActive !== undefined ? (patch.isActive ? 1 : 0) : undefined,
-      updated_at: patch.updatedAt,
-      deleted_at: patch.deletedAt,
+      updated_at: patch.updatedAt !== undefined ? toSqlDateTime(patch.updatedAt) : undefined,
+      deleted_at:
+        patch.deletedAt !== undefined
+          ? patch.deletedAt === null
+            ? null
+            : toSqlDateTime(patch.deletedAt)
+          : undefined,
     };
 
     for (const [column, value] of Object.entries(columnMap)) {

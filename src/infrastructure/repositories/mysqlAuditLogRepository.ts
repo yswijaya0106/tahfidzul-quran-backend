@@ -1,6 +1,7 @@
 import { Pool } from "mysql2/promise";
 import { AuditLogRepository } from "../../domain/repositories/auditLogRepository";
 import { AuditLog } from "../../domain/entities/auditLog";
+import { toSqlDateTime } from "../db/dateTime";
 
 export class MysqlAuditLogRepository implements AuditLogRepository {
   constructor(private readonly pool: Pool) {}
@@ -16,7 +17,7 @@ export class MysqlAuditLogRepository implements AuditLogRepository {
         entry.resourceType,
         entry.resourceId,
         entry.context ? JSON.stringify(entry.context) : null,
-        entry.createdAt,
+        toSqlDateTime(entry.createdAt),
       ],
     );
   }

@@ -1,6 +1,7 @@
 import { v4 as uuid } from "uuid";
 import { createPool } from "./pool";
 import { BcryptPasswordHasher } from "../auth/bcryptPasswordHasher";
+import { toSqlDateTime } from "./dateTime";
 
 /**
  * Bootstraps a single ADMIN user for local development. Run once against an
@@ -17,7 +18,7 @@ async function seedAdmin(): Promise<void> {
   try {
     const hasher = new BcryptPasswordHasher();
     const passwordHash = await hasher.hash(password);
-    const now = new Date().toISOString();
+    const now = toSqlDateTime(new Date().toISOString());
 
     await pool.query(
       `INSERT INTO users (id, full_name, email, password_hash, role, is_active, created_at, updated_at)

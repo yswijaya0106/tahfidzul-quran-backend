@@ -7,6 +7,7 @@ import {
 } from "../../domain/entities/location";
 import { ListResult, PageRequest, offsetFor } from "../../shared/pagination";
 import { withTransaction } from "../db/pool";
+import { toSqlDateTime } from "../db/dateTime";
 
 interface LocationRow extends RowDataPacket {
   id: string;
@@ -138,8 +139,8 @@ export class MysqlLocationRepository implements LocationRepository {
           location.description,
           location.coverPhotoObjectKey,
           location.status,
-          location.createdAt,
-          location.updatedAt,
+          toSqlDateTime(location.createdAt),
+          toSqlDateTime(location.updatedAt),
         ],
       );
 
@@ -163,8 +164,13 @@ export class MysqlLocationRepository implements LocationRepository {
       description: patch.description,
       cover_photo_object_key: patch.coverPhotoObjectKey,
       status: patch.status,
-      updated_at: patch.updatedAt,
-      deleted_at: patch.deletedAt,
+      updated_at: patch.updatedAt !== undefined ? toSqlDateTime(patch.updatedAt) : undefined,
+      deleted_at:
+        patch.deletedAt !== undefined
+          ? patch.deletedAt === null
+            ? null
+            : toSqlDateTime(patch.deletedAt)
+          : undefined,
     };
 
     const fields: string[] = [];

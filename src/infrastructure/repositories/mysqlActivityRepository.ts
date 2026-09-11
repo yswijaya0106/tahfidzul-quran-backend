@@ -3,6 +3,7 @@ import { ActivityRepository, ActivityFilters } from "../../domain/repositories/a
 import { Activity, ActivityPhoto } from "../../domain/entities/activity";
 import { ListResult, PageRequest, offsetFor } from "../../shared/pagination";
 import { withTransaction } from "../db/pool";
+import { toSqlDate, toSqlDateTime } from "../db/dateTime";
 
 interface ActivityRow extends RowDataPacket {
   id: string;
@@ -76,11 +77,11 @@ export class MysqlActivityRepository implements ActivityRepository {
     }
     if (filters.dateFrom) {
       conditions.push("activity_date >= ?");
-      params.push(filters.dateFrom);
+      params.push(toSqlDate(filters.dateFrom));
     }
     if (filters.dateTo) {
       conditions.push("activity_date <= ?");
-      params.push(filters.dateTo);
+      params.push(toSqlDate(filters.dateTo));
     }
 
     const whereClause = conditions.join(" AND ");
@@ -112,10 +113,10 @@ export class MysqlActivityRepository implements ActivityRepository {
           activity.locationId,
           activity.title,
           activity.description,
-          activity.activityDate,
+          toSqlDate(activity.activityDate),
           activity.createdByUserId,
-          activity.createdAt,
-          activity.updatedAt,
+          toSqlDateTime(activity.createdAt),
+          toSqlDateTime(activity.updatedAt),
         ],
       );
 
@@ -131,7 +132,7 @@ export class MysqlActivityRepository implements ActivityRepository {
             photo.caption,
             photo.displayOrder,
             photo.processingStatus,
-            photo.createdAt,
+            toSqlDateTime(photo.createdAt),
           ],
         );
       }
@@ -142,9 +143,14 @@ export class MysqlActivityRepository implements ActivityRepository {
     const columnMap: Record<string, unknown> = {
       title: patch.title,
       description: patch.description,
-      activity_date: patch.activityDate,
-      updated_at: patch.updatedAt,
-      deleted_at: patch.deletedAt,
+      activity_date: patch.activityDate !== undefined ? toSqlDate(patch.activityDate) : undefined,
+      updated_at: patch.updatedAt !== undefined ? toSqlDateTime(patch.updatedAt) : undefined,
+      deleted_at:
+        patch.deletedAt !== undefined
+          ? patch.deletedAt === null
+            ? null
+            : toSqlDateTime(patch.deletedAt)
+          : undefined,
     };
 
     const fields: string[] = [];
@@ -179,7 +185,7 @@ export class MysqlActivityRepository implements ActivityRepository {
             photo.caption,
             photo.displayOrder,
             photo.processingStatus,
-            photo.createdAt,
+            toSqlDateTime(photo.createdAt),
           ],
         );
       }

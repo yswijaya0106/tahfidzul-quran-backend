@@ -3,6 +3,7 @@ import {
   RefreshTokenRepository,
   StoredRefreshToken,
 } from "../../domain/repositories/refreshTokenRepository";
+import { toSqlDateTime } from "../db/dateTime";
 
 interface RefreshTokenRow extends RowDataPacket {
   id: string;
@@ -31,7 +32,13 @@ export class MysqlRefreshTokenRepository implements RefreshTokenRepository {
     await this.pool.query(
       `INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at, created_at)
        VALUES (?, ?, ?, ?, ?)`,
-      [token.id, token.userId, token.tokenHash, token.expiresAt, token.createdAt],
+      [
+        token.id,
+        token.userId,
+        token.tokenHash,
+        toSqlDateTime(token.expiresAt),
+        toSqlDateTime(token.createdAt),
+      ],
     );
   }
 
