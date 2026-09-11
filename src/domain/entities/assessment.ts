@@ -1,6 +1,9 @@
+import { Grade } from "./grade";
+
 export type AssessmentType = "NEW_MEMORIZATION" | "MUROJAAH";
 
-export type AssessmentGrade = "MUMTAZ" | "JAYYID_JIDDAN" | "JAYYID" | "NEEDS_REVIEW";
+/** @deprecated import {Grade} from "./grade" instead; kept as an alias during the transition. */
+export type AssessmentGrade = Grade;
 
 export interface QuranPosition {
   surahNumber: number;

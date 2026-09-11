@@ -32,6 +32,7 @@
     { "key": "locationId", "value": "", "type": "string" },
     { "key": "studentId", "value": "", "type": "string" },
     { "key": "assessmentId", "value": "", "type": "string" },
+    { "key": "ikhtibarId", "value": "", "type": "string" },
     { "key": "activityId", "value": "", "type": "string" },
     { "key": "userId", "value": "", "type": "string" },
     { "key": "objectKey", "value": "", "type": "string" }
@@ -523,6 +524,99 @@
               "raw": "{{baseUrl}}/assessments/{{assessmentId}}",
               "host": ["{{baseUrl}}"],
               "path": ["assessments", "{{assessmentId}}"]
+            },
+            "description": "Soft-delete with an audit event; admin or the assigned operator."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ikhtibar",
+      "item": [
+        {
+          "name": "List ikhtibar for student",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/students/{{studentId}}/ikhtibar?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["students", "{{studentId}}", "ikhtibar"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" },
+                { "key": "dateFrom", "value": "2026-01-01", "disabled": true },
+                { "key": "dateTo", "value": "2026-12-31", "disabled": true }
+              ]
+            },
+            "description": "Periodic Juz exam results, distinct from the surah/verse-level daily assessments above."
+          }
+        },
+        {
+          "name": "Create ikhtibar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('ikhtibarId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examDate\": \"2026-02-01T00:00:00.000Z\",\n  \"juzFrom\": 1,\n  \"juzTo\": 3,\n  \"grade\": \"MUMTAZ\",\n  \"score\": 95,\n  \"notes\": \"Hafalan lancar, tajwid dan kelancaran sangat baik.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/students/{{studentId}}/ikhtibar",
+              "host": ["{{baseUrl}}"],
+              "path": ["students", "{{studentId}}", "ikhtibar"]
+            },
+            "description": "grade is one of MUMTAZ, JAYYID_JIDDAN, JAYYID, MAQBUL, RASIB (same scale as daily assessments). score is 0-100. juzFrom/juzTo are 1-30 and juzTo must not precede juzFrom."
+          }
+        },
+        {
+          "name": "Get ikhtibar by id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/ikhtibar/{{ikhtibarId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ikhtibar", "{{ikhtibarId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update ikhtibar",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"grade\": \"JAYYID_JIDDAN\",\n  \"score\": 88\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ikhtibar/{{ikhtibarId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ikhtibar", "{{ikhtibarId}}"]
+            },
+            "description": "Creates a revision/audit event; never silently overwrites the prior value."
+          }
+        },
+        {
+          "name": "Archive (delete) ikhtibar",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/ikhtibar/{{ikhtibarId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ikhtibar", "{{ikhtibarId}}"]
             },
             "description": "Soft-delete with an audit event; admin or the assigned operator."
           }

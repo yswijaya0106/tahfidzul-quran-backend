@@ -14,6 +14,7 @@ import { MysqlAssessmentRepository } from "./repositories/mysqlAssessmentReposit
 import { MysqlActivityRepository } from "./repositories/mysqlActivityRepository";
 import { MysqlAuditLogRepository } from "./repositories/mysqlAuditLogRepository";
 import { MysqlDashboardRepository } from "./repositories/mysqlDashboardRepository";
+import { MysqlIkhtibarRepository } from "./repositories/mysqlIkhtibarRepository";
 
 import { LoginUseCase } from "../application/auth/loginUseCase";
 import { RefreshUseCase } from "../application/auth/refreshUseCase";
@@ -26,6 +27,7 @@ import { ActivityUseCases } from "../application/activities/activityUseCases";
 import { QuranUseCases } from "../application/quran/quranUseCases";
 import { DashboardUseCases } from "../application/dashboard/dashboardUseCases";
 import { FileUseCases } from "../application/files/fileUseCases";
+import { IkhtibarUseCases } from "../application/ikhtibar/ikhtibarUseCases";
 
 export interface Container {
   pool: Pool;
@@ -44,6 +46,7 @@ export interface Container {
   quranUseCases: QuranUseCases;
   dashboardUseCases: DashboardUseCases;
   fileUseCases: FileUseCases;
+  ikhtibarUseCases: IkhtibarUseCases;
 }
 
 export async function buildContainer(): Promise<Container> {
@@ -66,6 +69,7 @@ export async function buildContainer(): Promise<Container> {
   const activityRepository = new MysqlActivityRepository(pool);
   const auditLogRepository = new MysqlAuditLogRepository(pool);
   const dashboardRepository = new MysqlDashboardRepository(pool);
+  const ikhtibarRepository = new MysqlIkhtibarRepository(pool);
 
   await quranRepository.warmCache();
 
@@ -118,5 +122,12 @@ export async function buildContainer(): Promise<Container> {
     quranUseCases: new QuranUseCases(quranRepository),
     dashboardUseCases: new DashboardUseCases(dashboardRepository, studentRepository, clock),
     fileUseCases: new FileUseCases(objectStorage),
+    ikhtibarUseCases: new IkhtibarUseCases(
+      ikhtibarRepository,
+      studentRepository,
+      auditLogRepository,
+      clock,
+      config.assessmentClockSkewMinutes,
+    ),
   };
 }

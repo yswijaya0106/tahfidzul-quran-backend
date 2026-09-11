@@ -17,7 +17,11 @@ collections):
    `studentId`.
 5. Run **Assessments > Create assessment** (uses `{{studentId}}`) — stores
    `assessmentId`.
-6. Run **Activities > Create activity** (uses `{{locationId}}`) — stores
+6. Run **Ikhtibar > Create ikhtibar** (uses `{{studentId}}`) — stores
+   `ikhtibarId`. Ikhtibar is the periodic per-Juz exam result (date + Juz
+   range + grade + numeric score), separate from the surah/verse-level
+   daily assessments above.
+7. Run **Activities > Create activity** (uses `{{locationId}}`) — stores
    `activityId`.
 
 Every "create" request has a test script that captures the returned id, so

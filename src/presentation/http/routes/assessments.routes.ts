@@ -1,7 +1,10 @@
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { AppError } from "../../../domain/errors";
+import { Grade, GRADES } from "../../../domain/entities/grade";
 import { parsePageRequest } from "../../../shared/pagination";
+
+const gradeEnum = z.enum(GRADES as unknown as [Grade, ...Grade[]]);
 
 const createAssessmentSchema = z.object({
   assessmentDate: z.string().datetime().or(z.string().date()),
@@ -10,7 +13,7 @@ const createAssessmentSchema = z.object({
   startVerseNumber: z.coerce.number().int().min(1),
   endSurahNumber: z.coerce.number().int().min(1).max(114),
   endVerseNumber: z.coerce.number().int().min(1),
-  grade: z.enum(["MUMTAZ", "JAYYID_JIDDAN", "JAYYID", "NEEDS_REVIEW"]),
+  grade: gradeEnum,
   notes: z.string().nullish(),
 });
 
@@ -24,6 +27,7 @@ export default async function assessmentsRoutes(fastify: FastifyInstance): Promi
     "/api/v1/students/:id/assessments",
     { preHandler: fastify.authenticate },
     async (request) => {
+      /* v8 ignore next */
       if (!request.auth) throw AppError.unauthenticated();
       const { id } = studentIdParams.parse(request.params);
       const query = request.query as Record<string, string>;
@@ -45,6 +49,7 @@ export default async function assessmentsRoutes(fastify: FastifyInstance): Promi
     "/api/v1/students/:id/assessments",
     { preHandler: fastify.authenticate },
     async (request, reply) => {
+      /* v8 ignore next */
       if (!request.auth) throw AppError.unauthenticated();
       const { id } = studentIdParams.parse(request.params);
       const input = createAssessmentSchema.parse(request.body);
@@ -54,6 +59,7 @@ export default async function assessmentsRoutes(fastify: FastifyInstance): Promi
   );
 
   fastify.get("/api/v1/assessments/:id", { preHandler: fastify.authenticate }, async (request) => {
+    /* v8 ignore next */
     if (!request.auth) throw AppError.unauthenticated();
     const { id } = assessmentIdParams.parse(request.params);
     const data = await fastify.container.assessmentUseCases.getById(request.auth, id);
@@ -64,6 +70,7 @@ export default async function assessmentsRoutes(fastify: FastifyInstance): Promi
     "/api/v1/assessments/:id",
     { preHandler: fastify.authenticate },
     async (request) => {
+      /* v8 ignore next */
       if (!request.auth) throw AppError.unauthenticated();
       const { id } = assessmentIdParams.parse(request.params);
       const input = updateAssessmentSchema.parse(request.body);
@@ -76,6 +83,7 @@ export default async function assessmentsRoutes(fastify: FastifyInstance): Promi
     "/api/v1/assessments/:id",
     { preHandler: fastify.authenticate },
     async (request, reply) => {
+      /* v8 ignore next */
       if (!request.auth) throw AppError.unauthenticated();
       const { id } = assessmentIdParams.parse(request.params);
       await fastify.container.assessmentUseCases.archive(request.auth, id);

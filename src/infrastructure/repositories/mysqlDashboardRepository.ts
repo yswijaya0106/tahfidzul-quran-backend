@@ -5,12 +5,13 @@ import {
   LocationDashboardData,
   StudentDashboardData,
 } from "../../domain/repositories/dashboardRepository";
-import { AssessmentGrade, AssessmentType } from "../../domain/entities/assessment";
+import { AssessmentType } from "../../domain/entities/assessment";
+import { Grade } from "../../domain/entities/grade";
 
 const TYPES: AssessmentType[] = ["NEW_MEMORIZATION", "MUROJAAH"];
 
-function emptyGradeDistribution(): Record<AssessmentGrade, number> {
-  return { MUMTAZ: 0, JAYYID_JIDDAN: 0, JAYYID: 0, NEEDS_REVIEW: 0 };
+function emptyGradeDistribution(): Record<Grade, number> {
+  return { MUMTAZ: 0, JAYYID_JIDDAN: 0, JAYYID: 0, MAQBUL: 0, RASIB: 0 };
 }
 
 function emptyTypeDistribution(): Record<AssessmentType, number> {
@@ -41,7 +42,7 @@ export class MysqlDashboardRepository implements DashboardRepository {
     let latestAssessmentDate: string | null = null;
 
     for (const row of assessmentRows as {
-      grade: AssessmentGrade;
+      grade: Grade;
       assessment_type: AssessmentType;
       assessment_date: Date;
     }[]) {
@@ -107,7 +108,7 @@ export class MysqlDashboardRepository implements DashboardRepository {
     };
 
     for (const row of historyRows as any[]) {
-      distributionByGrade[row.grade as AssessmentGrade] += 1;
+      distributionByGrade[row.grade as Grade] += 1;
       coveredRanges[row.assessment_type as AssessmentType].push({
         startSurahNumber: row.start_surah_number,
         endSurahNumber: row.end_surah_number,

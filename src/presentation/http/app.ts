@@ -17,6 +17,7 @@ import activitiesRoutes from "./routes/activities.routes";
 import quranRoutes from "./routes/quran.routes";
 import dashboardRoutes from "./routes/dashboard.routes";
 import filesRoutes from "./routes/files.routes";
+import ikhtibarRoutes from "./routes/ikhtibar.routes";
 
 export async function buildApp(container?: Container): Promise<FastifyInstance> {
   const fastify = Fastify({
@@ -43,6 +44,7 @@ export async function buildApp(container?: Container): Promise<FastifyInstance> 
   });
 
   fastify.decorate("container", container ?? (await buildContainer()));
+  fastify.setErrorHandler(errorHandler);
 
   await fastify.register(helmet);
   await fastify.register(cors, { origin: config.corsOrigin });
@@ -71,8 +73,7 @@ export async function buildApp(container?: Container): Promise<FastifyInstance> 
   await fastify.register(quranRoutes);
   await fastify.register(dashboardRoutes);
   await fastify.register(filesRoutes);
-
-  fastify.setErrorHandler(errorHandler);
+  await fastify.register(ikhtibarRoutes);
 
   fastify.get("/healthz", async () => ({ status: "ok" }));
 
