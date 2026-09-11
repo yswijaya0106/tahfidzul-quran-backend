@@ -1,0 +1,23 @@
+CREATE TABLE students (
+  id CHAR(36) PRIMARY KEY,
+  student_code VARCHAR(32) NOT NULL,
+  full_name VARCHAR(150) NOT NULL,
+  location_id CHAR(36) NOT NULL,
+  nik_encrypted VARCHAR(255) NULL,
+  guardian_name VARCHAR(150) NULL,
+  address TEXT NULL,
+  student_phone VARCHAR(32) NULL,
+  guardian_phone VARCHAR(32) NULL,
+  student_photo_object_key VARCHAR(512) NULL,
+  id_card_photo_object_key VARCHAR(512) NULL,
+  graduation_certificate_object_key VARCHAR(512) NULL,
+  status ENUM('ACTIVE', 'ARCHIVED') NOT NULL DEFAULT 'ACTIVE',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP NULL,
+  CONSTRAINT fk_students_location FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE RESTRICT,
+  UNIQUE KEY uq_students_code (student_code),
+  KEY idx_students_location (location_id),
+  KEY idx_students_name (full_name),
+  KEY idx_students_phone (student_phone)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
