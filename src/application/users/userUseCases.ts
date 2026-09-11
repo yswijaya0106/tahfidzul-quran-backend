@@ -1,5 +1,6 @@
 import { v4 as uuid } from "uuid";
 import { UserRepository, UserFilters } from "../../domain/repositories/userRepository";
+import { LocationRepository } from "../../domain/repositories/locationRepository";
 import { AuditLogRepository } from "../../domain/repositories/auditLogRepository";
 import { AppError } from "../../domain/errors";
 import { PublicUser, User, UserRole, toPublicUser } from "../../domain/entities/user";
@@ -27,10 +28,35 @@ export interface UpdateUserInput {
 export class UserUseCases {
   constructor(
     private readonly users: UserRepository,
+    private readonly locations: LocationRepository,
     private readonly auditLogs: AuditLogRepository,
     private readonly passwordHasher: PasswordHasher,
     private readonly clock: Clock,
   ) {}
+
+  /** A LOCATION_OPERATOR must always be tied to at least one Tahfidz location. */
+  private async assertValidLocationAssignment(
+    role: UserRole,
+    locationIds: string[] | undefined,
+  ): Promise<void> {
+    if (role !== "LOCATION_OPERATOR") return;
+
+    if (!locationIds || locationIds.length === 0) {
+      throw AppError.unprocessable(
+        "LOCATION_OPERATOR users must be assigned to at least one location.",
+        { locationIds: "At least one location is required for this role." },
+      );
+    }
+
+    for (const locationId of locationIds) {
+      const location = await this.locations.findById(locationId);
+      if (!location || location.deletedAt) {
+        throw AppError.unprocessable("locationIds must reference existing locations.", {
+          locationIds: `Location ${locationId} does not exist.`,
+        });
+      }
+    }
+  }
 
   async list(
     auth: AuthContext,
@@ -57,6 +83,8 @@ export class UserUseCases {
         email: "Provide email or phone.",
       });
     }
+
+    await this.assertValidLocationAssignment(input.role, input.locationIds);
 
     const now = this.clock.nowIso();
     const user: User = {
@@ -95,6 +123,10 @@ export class UserUseCases {
     assertAdmin(auth);
     const existing = await this.users.findById(id);
     if (!existing || existing.deletedAt) throw AppError.notFound("User not found.");
+
+    const effectiveRole = input.role ?? existing.role;
+    const effectiveLocationIds = input.locationIds ?? (await this.users.getAssignedLocationIds(id));
+    await this.assertValidLocationAssignment(effectiveRole, effectiveLocationIds);
 
     const now = this.clock.nowIso();
     const patch: Partial<User> = { updatedAt: now };

@@ -96,7 +96,13 @@ export async function buildContainer(): Promise<Container> {
     ),
     logout: new LogoutUseCase(refreshTokenRepository, auditLogRepository, tokenService, clock),
     logoutAll: new LogoutAllUseCase(refreshTokenRepository, auditLogRepository, clock),
-    userUseCases: new UserUseCases(userRepository, auditLogRepository, passwordHasher, clock),
+    userUseCases: new UserUseCases(
+      userRepository,
+      locationRepository,
+      auditLogRepository,
+      passwordHasher,
+      clock,
+    ),
     locationUseCases: new LocationUseCases(locationRepository, auditLogRepository, clock),
     studentUseCases: new StudentUseCases(
       studentRepository,
