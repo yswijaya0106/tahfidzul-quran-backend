@@ -103,6 +103,49 @@ describe("activities routes", () => {
     expect(res.statusCode).toBe(403);
   });
 
+  it("returns signed photo URLs for an activity", async () => {
+    const createRes = await ctx.app.inject({
+      method: "POST",
+      url: `/api/v1/locations/${locationId}/activities`,
+      headers: authHeader(ctx.adminToken),
+      payload: {
+        title: "Activity With Photos",
+        activityDate: "2026-01-15",
+        photos: [
+          { objectKey: "objects/2.jpg", mimeType: "image/jpeg", sizeBytes: 1024, displayOrder: 0 },
+        ],
+      },
+    });
+    const activity = createRes.json().data;
+
+    const res = await ctx.app.inject({
+      method: "GET",
+      url: `/api/v1/activities/${activity.id}/photos`,
+      headers: authHeader(ctx.adminToken),
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().data).toHaveLength(1);
+    expect(res.json().data[0].url).toContain("http");
+  });
+
+  it("rejects photos for an operator outside the location scope", async () => {
+    const createRes = await ctx.app.inject({
+      method: "POST",
+      url: `/api/v1/locations/${locationId}/activities`,
+      headers: authHeader(ctx.adminToken),
+      payload: { title: "X", activityDate: "2026-01-15", photos: [] },
+    });
+    const activity = createRes.json().data;
+    const operator = await createOperator(ctx, []);
+
+    const res = await ctx.app.inject({
+      method: "GET",
+      url: `/api/v1/activities/${activity.id}/photos`,
+      headers: authHeader(operator.token),
+    });
+    expect(res.statusCode).toBe(403);
+  });
+
   it("returns a validation error for an unsupported photo MIME type", async () => {
     const res = await ctx.app.inject({
       method: "POST",

@@ -22,6 +22,10 @@ export interface OrganizationMemberInput {
 export interface CreateLocationInput {
   name: string;
   address: string;
+  provinsi?: string | null;
+  kabKota?: string | null;
+  kecamatan?: string | null;
+  kodePos?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   phone?: string | null;
@@ -32,6 +36,10 @@ export interface CreateLocationInput {
 export interface UpdateLocationInput {
   name?: string;
   address?: string;
+  provinsi?: string | null;
+  kabKota?: string | null;
+  kecamatan?: string | null;
+  kodePos?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   phone?: string | null;
@@ -86,6 +94,10 @@ export class LocationUseCases {
       id: uuid(),
       name: input.name,
       address: input.address,
+      provinsi: input.provinsi ?? null,
+      kabKota: input.kabKota ?? null,
+      kecamatan: input.kecamatan ?? null,
+      kodePos: input.kodePos ?? null,
       latitude: input.latitude ?? null,
       longitude: input.longitude ?? null,
       phone: input.phone ?? null,
@@ -131,6 +143,10 @@ export class LocationUseCases {
     const patch: Partial<Location> = { updatedAt: now };
     if (input.name !== undefined) patch.name = input.name;
     if (input.address !== undefined) patch.address = input.address;
+    if (input.provinsi !== undefined) patch.provinsi = input.provinsi;
+    if (input.kabKota !== undefined) patch.kabKota = input.kabKota;
+    if (input.kecamatan !== undefined) patch.kecamatan = input.kecamatan;
+    if (input.kodePos !== undefined) patch.kodePos = input.kodePos;
     if (input.latitude !== undefined) patch.latitude = input.latitude;
     if (input.longitude !== undefined) patch.longitude = input.longitude;
     if (input.phone !== undefined) patch.phone = input.phone;

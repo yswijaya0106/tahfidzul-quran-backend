@@ -79,8 +79,10 @@ function buildUseCase(students: Student[]) {
 const student: Student = {
   id: "student-1",
   studentCode: "TQ-0001",
+  programStartDate: null,
   fullName: "Test Student",
   locationId: "location-a",
+  angkatanId: null,
   nikEncrypted: null,
   guardianName: null,
   address: null,

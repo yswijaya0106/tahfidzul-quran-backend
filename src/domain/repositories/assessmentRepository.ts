@@ -2,6 +2,7 @@ import {
   AssessmentType,
   MemorizationAssessment,
   MemorizationAssessmentRevision,
+  MemorizationAssessmentWithTarget,
 } from "../entities/assessment";
 import { PageRequest, ListResult } from "../../shared/pagination";
 
@@ -15,8 +16,11 @@ export interface AssessmentFilters {
 }
 
 export interface AssessmentRepository {
-  findById(id: string): Promise<MemorizationAssessment | null>;
-  list(filters: AssessmentFilters, page: PageRequest): Promise<ListResult<MemorizationAssessment>>;
+  findById(id: string): Promise<MemorizationAssessmentWithTarget | null>;
+  list(
+    filters: AssessmentFilters,
+    page: PageRequest,
+  ): Promise<ListResult<MemorizationAssessmentWithTarget>>;
   create(assessment: MemorizationAssessment): Promise<void>;
   update(id: string, patch: Partial<MemorizationAssessment>): Promise<void>;
   archive(id: string): Promise<void>;
@@ -25,5 +29,5 @@ export interface AssessmentRepository {
   findLatestForStudent(
     studentId: string,
     assessmentType: AssessmentType,
-  ): Promise<MemorizationAssessment | null>;
+  ): Promise<MemorizationAssessmentWithTarget | null>;
 }

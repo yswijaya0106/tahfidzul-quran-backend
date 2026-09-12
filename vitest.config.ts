@@ -5,6 +5,13 @@ export default defineConfig({
     environment: "node",
     include: ["tests/**/*.test.ts"],
     fileParallelism: false,
+    // Isolate tests from the dev/app database: this only sets the var for
+    // the vitest process, before config.ts's `dotenv/config` import runs
+    // (dotenv never overrides an already-set env var), so `npm run dev` and
+    // manual scripts still use DB_NAME from .env untouched.
+    env: {
+      DB_NAME: "tahfidz_quran_test",
+    },
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],

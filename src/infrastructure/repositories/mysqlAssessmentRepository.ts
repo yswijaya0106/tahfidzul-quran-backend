@@ -7,6 +7,7 @@ import {
   AssessmentType,
   MemorizationAssessment,
   MemorizationAssessmentRevision,
+  MemorizationAssessmentWithTarget,
 } from "../../domain/entities/assessment";
 import { ListResult, PageRequest, offsetFor } from "../../shared/pagination";
 import { toSqlDate, toSqlDateTime } from "../db/dateTime";
@@ -16,6 +17,7 @@ interface AssessmentRow extends RowDataPacket {
   student_id: string;
   location_id: string;
   assessment_date: Date;
+  day_number: number | null;
   assessment_type: AssessmentType;
   start_surah_number: number;
   start_verse_number: number;
@@ -27,7 +29,15 @@ interface AssessmentRow extends RowDataPacket {
   created_at: Date;
   updated_at: Date;
   deleted_at: Date | null;
+  target_end_surah_number: number | null;
+  target_end_verse_number: number | null;
 }
+
+const ASSESSMENT_WITH_TARGET_SELECT = `
+  SELECT ma.*, dt.end_surah_number AS target_end_surah_number, dt.end_verse_number AS target_end_verse_number
+  FROM memorization_assessments ma
+  LEFT JOIN daily_targets dt ON dt.day_number = ma.day_number
+`;
 
 interface RevisionRow extends RowDataPacket {
   id: string;
@@ -43,12 +53,13 @@ function toDateOnly(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-function mapAssessment(row: AssessmentRow): MemorizationAssessment {
+function mapAssessment(row: AssessmentRow): MemorizationAssessmentWithTarget {
   return {
     id: row.id,
     studentId: row.student_id,
     locationId: row.location_id,
     assessmentDate: toDateOnly(row.assessment_date),
+    dayNumber: row.day_number,
     assessmentType: row.assessment_type,
     startSurahNumber: row.start_surah_number,
     startVerseNumber: row.start_verse_number,
@@ -60,6 +71,8 @@ function mapAssessment(row: AssessmentRow): MemorizationAssessment {
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
     deletedAt: row.deleted_at ? row.deleted_at.toISOString() : null,
+    targetEndSurahNumber: row.target_end_surah_number,
+    targetEndVerseNumber: row.target_end_verse_number,
   };
 }
 
@@ -78,9 +91,9 @@ function mapRevision(row: RevisionRow): MemorizationAssessmentRevision {
 export class MysqlAssessmentRepository implements AssessmentRepository {
   constructor(private readonly pool: Pool) {}
 
-  async findById(id: string): Promise<MemorizationAssessment | null> {
+  async findById(id: string): Promise<MemorizationAssessmentWithTarget | null> {
     const [rows] = await this.pool.query<AssessmentRow[]>(
-      "SELECT * FROM memorization_assessments WHERE id = ?",
+      `${ASSESSMENT_WITH_TARGET_SELECT} WHERE ma.id = ?`,
       [id],
     );
     return rows[0] ? mapAssessment(rows[0]) : null;
@@ -89,48 +102,48 @@ export class MysqlAssessmentRepository implements AssessmentRepository {
   async list(
     filters: AssessmentFilters,
     page: PageRequest,
-  ): Promise<ListResult<MemorizationAssessment>> {
-    const conditions: string[] = ["deleted_at IS NULL"];
+  ): Promise<ListResult<MemorizationAssessmentWithTarget>> {
+    const conditions: string[] = ["ma.deleted_at IS NULL"];
     const params: unknown[] = [];
 
     if (filters.studentId) {
-      conditions.push("student_id = ?");
+      conditions.push("ma.student_id = ?");
       params.push(filters.studentId);
     }
     if (filters.locationId) {
-      conditions.push("location_id = ?");
+      conditions.push("ma.location_id = ?");
       params.push(filters.locationId);
     }
     if (filters.locationIds) {
       if (filters.locationIds.length === 0) {
         return { data: [], meta: { page: page.page, pageSize: page.pageSize, total: 0 } };
       }
-      conditions.push(`location_id IN (${filters.locationIds.map(() => "?").join(",")})`);
+      conditions.push(`ma.location_id IN (${filters.locationIds.map(() => "?").join(",")})`);
       params.push(...filters.locationIds);
     }
     if (filters.assessmentType) {
-      conditions.push("assessment_type = ?");
+      conditions.push("ma.assessment_type = ?");
       params.push(filters.assessmentType);
     }
     if (filters.dateFrom) {
-      conditions.push("assessment_date >= ?");
+      conditions.push("ma.assessment_date >= ?");
       params.push(toSqlDate(filters.dateFrom));
     }
     if (filters.dateTo) {
-      conditions.push("assessment_date <= ?");
+      conditions.push("ma.assessment_date <= ?");
       params.push(toSqlDate(filters.dateTo));
     }
 
     const whereClause = conditions.join(" AND ");
     const [countRows] = await this.pool.query<RowDataPacket[]>(
-      `SELECT COUNT(*) AS total FROM memorization_assessments WHERE ${whereClause}`,
+      `SELECT COUNT(*) AS total FROM memorization_assessments ma WHERE ${whereClause}`,
       params,
     );
     const total = Number((countRows[0] as { total: number }).total);
 
     const [rows] = await this.pool.query<AssessmentRow[]>(
-      `SELECT * FROM memorization_assessments WHERE ${whereClause}
-       ORDER BY assessment_date DESC, created_at DESC LIMIT ? OFFSET ?`,
+      `${ASSESSMENT_WITH_TARGET_SELECT} WHERE ${whereClause}
+       ORDER BY ma.assessment_date DESC, ma.created_at DESC LIMIT ? OFFSET ?`,
       [...params, page.pageSize, offsetFor(page)],
     );
 
@@ -143,15 +156,16 @@ export class MysqlAssessmentRepository implements AssessmentRepository {
   async create(assessment: MemorizationAssessment): Promise<void> {
     await this.pool.query(
       `INSERT INTO memorization_assessments
-        (id, student_id, location_id, assessment_date, assessment_type, start_surah_number,
+        (id, student_id, location_id, assessment_date, day_number, assessment_type, start_surah_number,
          start_verse_number, end_surah_number, end_verse_number, grade, notes, assessor_user_id,
          created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         assessment.id,
         assessment.studentId,
         assessment.locationId,
         toSqlDate(assessment.assessmentDate),
+        assessment.dayNumber,
         assessment.assessmentType,
         assessment.startSurahNumber,
         assessment.startVerseNumber,
@@ -170,6 +184,7 @@ export class MysqlAssessmentRepository implements AssessmentRepository {
     const columnMap: Record<string, unknown> = {
       assessment_date:
         patch.assessmentDate !== undefined ? toSqlDate(patch.assessmentDate) : undefined,
+      day_number: patch.dayNumber,
       assessment_type: patch.assessmentType,
       start_surah_number: patch.startSurahNumber,
       start_verse_number: patch.startVerseNumber,
@@ -236,11 +251,11 @@ export class MysqlAssessmentRepository implements AssessmentRepository {
   async findLatestForStudent(
     studentId: string,
     assessmentType: AssessmentType,
-  ): Promise<MemorizationAssessment | null> {
+  ): Promise<MemorizationAssessmentWithTarget | null> {
     const [rows] = await this.pool.query<AssessmentRow[]>(
-      `SELECT * FROM memorization_assessments
-       WHERE student_id = ? AND assessment_type = ? AND deleted_at IS NULL
-       ORDER BY assessment_date DESC, created_at DESC LIMIT 1`,
+      `${ASSESSMENT_WITH_TARGET_SELECT}
+       WHERE ma.student_id = ? AND ma.assessment_type = ? AND ma.deleted_at IS NULL
+       ORDER BY ma.assessment_date DESC, ma.created_at DESC LIMIT 1`,
       [studentId, assessmentType],
     );
     return rows[0] ? mapAssessment(rows[0]) : null;

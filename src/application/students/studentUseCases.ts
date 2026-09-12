@@ -1,6 +1,7 @@
 import { v4 as uuid } from "uuid";
 import { StudentRepository, StudentFilters } from "../../domain/repositories/studentRepository";
 import { LocationRepository } from "../../domain/repositories/locationRepository";
+import { AngkatanRepository } from "../../domain/repositories/angkatanRepository";
 import { AuditLogRepository } from "../../domain/repositories/auditLogRepository";
 import { AppError } from "../../domain/errors";
 import { Student, maskNik } from "../../domain/entities/student";
@@ -12,6 +13,8 @@ import { FieldEncryptor } from "./ports";
 export interface CreateStudentInput {
   fullName: string;
   locationId: string;
+  angkatanId?: string | null;
+  programStartDate?: string | null;
   nik?: string | null;
   guardianName?: string | null;
   address?: string | null;
@@ -21,6 +24,8 @@ export interface CreateStudentInput {
 
 export interface UpdateStudentInput {
   fullName?: string;
+  angkatanId?: string | null;
+  programStartDate?: string | null;
   nik?: string | null;
   guardianName?: string | null;
   address?: string | null;
@@ -46,10 +51,29 @@ export class StudentUseCases {
   constructor(
     private readonly students: StudentRepository,
     private readonly locations: LocationRepository,
+    private readonly angkatan: AngkatanRepository,
     private readonly auditLogs: AuditLogRepository,
     private readonly encryptor: FieldEncryptor,
     private readonly clock: Clock,
   ) {}
+
+  private async assertValidAngkatan(
+    angkatanId: string | null | undefined,
+    locationId: string,
+  ): Promise<void> {
+    if (!angkatanId) return;
+    const found = await this.angkatan.findById(angkatanId);
+    if (!found || found.deletedAt) {
+      throw AppError.validation("angkatanId must reference an existing angkatan.", {
+        angkatanId: "Invalid angkatan.",
+      });
+    }
+    if (found.locationId !== locationId) {
+      throw AppError.validation("angkatanId must belong to the student's location.", {
+        angkatanId: "Angkatan belongs to a different location.",
+      });
+    }
+  }
 
   async list(
     auth: AuthContext,
@@ -90,13 +114,16 @@ export class StudentUseCases {
         locationId: "Invalid location.",
       });
     }
+    await this.assertValidAngkatan(input.angkatanId, input.locationId);
 
     const now = this.clock.nowIso();
     const student: Student = {
       id: uuid(),
       studentCode: await generateStudentCode(input.locationId),
+      programStartDate: input.programStartDate ?? null,
       fullName: input.fullName,
       locationId: input.locationId,
+      angkatanId: input.angkatanId ?? null,
       nikEncrypted: input.nik ? this.encryptor.encrypt(input.nik) : null,
       guardianName: input.guardianName ?? null,
       address: input.address ?? null,
@@ -120,9 +147,15 @@ export class StudentUseCases {
     const existing = await this.students.findById(id);
     if (!existing || existing.deletedAt) throw AppError.notFound("Student not found.");
 
+    if (input.angkatanId !== undefined) {
+      await this.assertValidAngkatan(input.angkatanId, existing.locationId);
+    }
+
     const now = this.clock.nowIso();
     const patch: Partial<Student> = { updatedAt: now };
     if (input.fullName !== undefined) patch.fullName = input.fullName;
+    if (input.angkatanId !== undefined) patch.angkatanId = input.angkatanId;
+    if (input.programStartDate !== undefined) patch.programStartDate = input.programStartDate;
     if (input.nik !== undefined) {
       patch.nikEncrypted = input.nik ? this.encryptor.encrypt(input.nik) : null;
     }

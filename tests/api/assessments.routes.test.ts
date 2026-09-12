@@ -130,4 +130,42 @@ describe("assessments routes", () => {
     });
     expect(res.statusCode).toBe(400);
   });
+
+  it("lists daily submissions for a location as admin", async () => {
+    const createRes = await ctx.app.inject({
+      method: "POST",
+      url: `/api/v1/students/${studentId}/assessments`,
+      headers: authHeader(ctx.adminToken),
+      payload: validPayload,
+    });
+    const assessment = createRes.json().data;
+
+    const listRes = await ctx.app.inject({
+      method: "GET",
+      url: `/api/v1/locations/${locationId}/assessments`,
+      headers: authHeader(ctx.adminToken),
+    });
+    expect(listRes.statusCode).toBe(200);
+    expect(listRes.json().data.some((a: { id: string }) => a.id === assessment.id)).toBe(true);
+  });
+
+  it("allows an operator assigned to the location to list its daily submissions", async () => {
+    const operator = await createOperator(ctx, [locationId]);
+    const res = await ctx.app.inject({
+      method: "GET",
+      url: `/api/v1/locations/${locationId}/assessments`,
+      headers: authHeader(operator.token),
+    });
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("rejects listing a location's daily submissions for an operator outside its scope", async () => {
+    const operator = await createOperator(ctx, []);
+    const res = await ctx.app.inject({
+      method: "GET",
+      url: `/api/v1/locations/${locationId}/assessments`,
+      headers: authHeader(operator.token),
+    });
+    expect(res.statusCode).toBe(403);
+  });
 });

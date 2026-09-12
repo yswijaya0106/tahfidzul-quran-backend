@@ -34,6 +34,7 @@ beforeAll(async () => {
     studentId,
     locationId,
     assessmentDate: new Date().toISOString(),
+    dayNumber: null,
     assessmentType: "NEW_MEMORIZATION",
     startSurahNumber: 1,
     startVerseNumber: 1,
@@ -121,6 +122,29 @@ describe("MysqlDashboardRepository", () => {
     expect(data.history).toEqual([]);
     expect(data.latestNewMemorization).toBeNull();
     expect(data.latestMurojaah).toBeNull();
+  });
+
+  it("computes a per-location overview for today", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const overview = await repo.getLocationsOverview(today);
+    const row = overview.find((l) => l.locationId === locationId);
+
+    expect(row).toBeDefined();
+    expect(row!.activeStudentCount).toBeGreaterThanOrEqual(2);
+    expect(row!.assessmentsToday).toBeGreaterThanOrEqual(1);
+    expect(row!.activitiesToday).toBeGreaterThanOrEqual(1);
+    expect(row!.lastAssessmentAt).not.toBeNull();
+    expect(row!.lastActivityAt).not.toBeNull();
+  });
+
+  it("returns zero counts for a date with no submissions", async () => {
+    const overview = await repo.getLocationsOverview("2000-01-01");
+    const row = overview.find((l) => l.locationId === locationId);
+
+    expect(row).toBeDefined();
+    expect(row!.assessmentsToday).toBe(0);
+    expect(row!.activitiesToday).toBe(0);
+    expect(row!.photosToday).toBe(0);
   });
 });
 

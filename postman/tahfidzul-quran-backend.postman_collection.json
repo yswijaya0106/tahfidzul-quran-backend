@@ -34,6 +34,7 @@
     { "key": "assessmentId", "value": "", "type": "string" },
     { "key": "ikhtibarId", "value": "", "type": "string" },
     { "key": "activityId", "value": "", "type": "string" },
+    { "key": "angkatanId", "value": "", "type": "string" },
     { "key": "userId", "value": "", "type": "string" },
     { "key": "objectKey", "value": "", "type": "string" }
   ],
@@ -161,6 +162,128 @@
               "host": ["{{baseUrl}}"],
               "path": ["quran", "surahs", "1"]
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ref Data",
+      "item": [
+        {
+          "name": "List provinces",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/ref/provinces",
+              "host": ["{{baseUrl}}"],
+              "path": ["ref", "provinces"]
+            },
+            "description": "Read-only lookup for the location form's province dropdown. Integer ids (not UUID), matching the pre-existing ref_province table."
+          }
+        },
+        {
+          "name": "List cities (optionally by province)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/ref/cities?provinceId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["ref", "cities"],
+              "query": [{ "key": "provinceId", "value": "1", "disabled": true }]
+            },
+            "description": "Read-only lookup for the location form's city/regency dropdown. Omit provinceId to list all cities."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Angkatan",
+      "item": [
+        {
+          "name": "List angkatan for location",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/locations/{{locationId}}/angkatan?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["locations", "{{locationId}}", "angkatan"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" },
+                { "key": "search", "value": "2024", "disabled": true }
+              ]
+            },
+            "description": "Admin sees all; a location operator only sees angkatan for their assigned locations."
+          }
+        },
+        {
+          "name": "Create angkatan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('angkatanId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/locations/{{locationId}}/angkatan",
+              "host": ["{{baseUrl}}"],
+              "path": ["locations", "{{locationId}}", "angkatan"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Angkatan 2024\",\n  \"startDate\": \"2024-01-01\",\n  \"endDate\": \"2024-12-31\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Admin only. name is unique per location."
+          }
+        },
+        {
+          "name": "Get angkatan by id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/angkatan/{{angkatanId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["angkatan", "{{angkatanId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update angkatan",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/angkatan/{{angkatanId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["angkatan", "{{angkatanId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Angkatan 2024 (Revisi)\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Admin only."
+          }
+        },
+        {
+          "name": "Delete angkatan",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/angkatan/{{angkatanId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["angkatan", "{{angkatanId}}"]
+            },
+            "description": "Admin only. Fails with 409 if any student is still assigned to this angkatan."
           }
         }
       ]
@@ -440,6 +563,25 @@
       "name": "Assessments",
       "item": [
         {
+          "name": "List daily submissions for location",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/locations/{{locationId}}/assessments?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["locations", "{{locationId}}", "assessments"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" },
+                { "key": "assessmentType", "value": "NEW_MEMORIZATION", "disabled": true },
+                { "key": "dateFrom", "value": "2026-01-01", "disabled": true },
+                { "key": "dateTo", "value": "2026-01-01", "disabled": true }
+              ]
+            },
+            "description": "Admin or an operator assigned to the location. Pass dateFrom=dateTo=today for 'setoran harian' (today's submissions only)."
+          }
+        },
+        {
           "name": "List assessments for student",
           "request": {
             "method": "GET",
@@ -716,6 +858,19 @@
     {
       "name": "Dashboard",
       "item": [
+        {
+          "name": "Locations overview (admin, all locations progress)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/overview?date=2026-01-01",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "overview"],
+              "query": [{ "key": "date", "value": "2026-01-01" }]
+            },
+            "description": "Admin only. date is optional (defaults to today). Returns per-location active student count and today's assessments/activities/photos submitted, for the admin landing dashboard."
+          }
+        },
         {
           "name": "Location dashboard",
           "request": {

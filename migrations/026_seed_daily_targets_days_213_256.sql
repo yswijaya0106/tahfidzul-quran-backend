@@ -1,0 +1,55 @@
+-- Days 213-256: rest of Al-Ahzab, Saba, Fatir, Ya-Sin, As-Saffat, Sad, Az-Zumar,
+-- Ghafir, Fussilat, Ash-Shura, Az-Zukhruf, Ad-Dukhan, Al-Jathiyah, Al-Ahqaf,
+-- Muhammad, into Al-Fath. Reads cleanly with no digit-reversal needed; day 213
+-- continues exactly from the already-seeded day 212 (Al-Ahzab:62), and this
+-- block lands exactly on six known surah-end boundaries: day 225 ends As-Saffat
+-- (182), day 237 ends Ghafir (85), day 240 ends Fussilat (54), day 248 ends
+-- Ad-Dukhan (59), day 252 ends Al-Ahqaf (35), day 254 ends Muhammad (38) - all
+-- matching docs/quran-surah-reference.md.
+INSERT INTO daily_targets
+  (day_number, start_surah_number, start_verse_number, end_surah_number, end_verse_number)
+VALUES
+  (213, 33, 63, 34, 7),
+  (214, 34, 8, 34, 22),
+  (215, 34, 23, 34, 39),
+  (216, 34, 40, 35, 3),
+  (217, 35, 4, 35, 18),
+  (218, 35, 19, 35, 38),
+  (219, 35, 39, 36, 12),
+  (220, 36, 13, 36, 40),
+  (221, 36, 41, 36, 70),
+  (222, 36, 71, 37, 24),
+  (223, 37, 25, 37, 76),
+  (224, 37, 77, 37, 126),
+  (225, 37, 127, 37, 182),
+  (226, 38, 1, 38, 26),
+  (227, 38, 27, 38, 61),
+  (228, 38, 62, 39, 5),
+  (229, 39, 6, 39, 21),
+  (230, 39, 22, 39, 40),
+  (231, 39, 41, 39, 56),
+  (232, 39, 57, 39, 74),
+  (233, 39, 75, 40, 16),
+  (234, 40, 17, 40, 33),
+  (235, 40, 34, 40, 49),
+  (236, 40, 50, 40, 66),
+  (237, 40, 67, 40, 85),
+  (238, 41, 1, 41, 20),
+  (239, 41, 21, 41, 38),
+  (240, 41, 39, 41, 54),
+  (241, 42, 1, 42, 15),
+  (242, 42, 16, 42, 31),
+  (243, 42, 32, 42, 51),
+  (244, 42, 52, 43, 22),
+  (245, 43, 23, 43, 47),
+  (246, 43, 48, 43, 73),
+  (247, 43, 74, 44, 18),
+  (248, 44, 19, 44, 59),
+  (249, 45, 1, 45, 22),
+  (250, 45, 23, 46, 5),
+  (251, 46, 6, 46, 20),
+  (252, 46, 21, 46, 35),
+  (253, 47, 1, 47, 19),
+  (254, 47, 20, 47, 38),
+  (255, 48, 1, 48, 15),
+  (256, 48, 16, 48, 28);

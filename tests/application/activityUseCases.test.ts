@@ -60,6 +60,12 @@ class FakeAuditLogRepository {
   }
 }
 
+class FakeObjectStorage {
+  async createSignedDownloadUrl(objectKey: string) {
+    return `https://signed.example.com/${objectKey}`;
+  }
+}
+
 function buildUseCase() {
   const activities = new FakeActivityRepository();
   const locations = new FakeLocationRepository();
@@ -71,6 +77,7 @@ function buildUseCase() {
     {
       nowIso: () => "2026-01-01T00:00:00.000Z",
     },
+    new FakeObjectStorage() as never,
   );
   return { useCase, activities, locations, auditLogs };
 }
@@ -86,6 +93,10 @@ const activeLocation: Location = {
   id: "location-a",
   name: "Location A",
   address: "Street",
+  provinsi: null,
+  kabKota: null,
+  kecamatan: null,
+  kodePos: null,
   latitude: null,
   longitude: null,
   phone: null,
@@ -260,6 +271,40 @@ describe("ActivityUseCases", () => {
     await useCase.archive(admin, "a1");
     expect(activities.activities[0]!.deletedAt).not.toBeNull();
     expect(auditLogs.entries).toHaveLength(1);
+  });
+
+  it("returns signed photo URLs for an activity within scope", async () => {
+    const { useCase, activities } = buildUseCase();
+    activities.activities.push(makeActivity("a1"));
+    activities.photos.set("a1", [
+      {
+        id: "p1",
+        activityId: "a1",
+        objectKey: "photo-1",
+        caption: "Caption",
+        displayOrder: 0,
+        thumbnailObjectKey: null,
+        processingStatus: "READY",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        deletedAt: null,
+      },
+    ]);
+
+    const photos = await useCase.getPhotos(admin, "a1");
+    expect(photos).toEqual([
+      { id: "p1", url: "https://signed.example.com/photo-1", caption: "Caption", displayOrder: 0 },
+    ]);
+  });
+
+  it("rejects getPhotos for an operator outside the location scope", async () => {
+    const { useCase, activities } = buildUseCase();
+    activities.activities.push(makeActivity("a1", "location-b"));
+    await expect(useCase.getPhotos(operator, "a1")).rejects.toMatchObject({ status: 403 });
+  });
+
+  it("throws not found for getPhotos on a missing activity", async () => {
+    const { useCase } = buildUseCase();
+    await expect(useCase.getPhotos(admin, "missing")).rejects.toMatchObject({ status: 404 });
   });
 
   it("rejects archive for a missing or already-deleted activity", async () => {

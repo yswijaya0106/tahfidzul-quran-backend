@@ -3,6 +3,7 @@ import { z } from "zod";
 import { AppError } from "../../../domain/errors";
 
 const idParams = z.object({ id: z.string().uuid() });
+const overviewQuerySchema = z.object({ date: z.string().date().optional() });
 
 function defaultRange(query: Record<string, string>) {
   const to = query.to ?? new Date().toISOString().slice(0, 10);
@@ -14,6 +15,51 @@ function defaultRange(query: Record<string, string>) {
 }
 
 export default async function dashboardRoutes(fastify: FastifyInstance): Promise<void> {
+  fastify.get(
+    "/api/v1/dashboard/overview",
+    { preHandler: fastify.authenticate },
+    async (request) => {
+      /* v8 ignore next */
+      if (!request.auth) throw AppError.unauthenticated();
+      const { date } = overviewQuerySchema.parse(request.query);
+      const data = await fastify.container.dashboardUseCases.getLocationsOverview(
+        request.auth,
+        date ?? new Date().toISOString().slice(0, 10),
+      );
+      return { data };
+    },
+  );
+
+  fastify.get(
+    "/api/v1/dashboard/memorization-progress",
+    { preHandler: fastify.authenticate },
+    async (request) => {
+      /* v8 ignore next */
+      if (!request.auth) throw AppError.unauthenticated();
+      const { date } = overviewQuerySchema.parse(request.query);
+      const data = await fastify.container.dashboardUseCases.getTodayMemorizationProgress(
+        request.auth,
+        date ?? new Date().toISOString().slice(0, 10),
+      );
+      return { data };
+    },
+  );
+
+  fastify.get(
+    "/api/v1/dashboard/today-activity-photos",
+    { preHandler: fastify.authenticate },
+    async (request) => {
+      /* v8 ignore next */
+      if (!request.auth) throw AppError.unauthenticated();
+      const { date } = overviewQuerySchema.parse(request.query);
+      const data = await fastify.container.dashboardUseCases.getTodayActivityPhotos(
+        request.auth,
+        date ?? new Date().toISOString().slice(0, 10),
+      );
+      return { data };
+    },
+  );
+
   fastify.get(
     "/api/v1/dashboard/locations/:id",
     { preHandler: fastify.authenticate },

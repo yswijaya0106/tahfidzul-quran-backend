@@ -25,8 +25,10 @@ function makeStudent(overrides: Partial<Student> = {}): Student {
   return {
     id: uuid(),
     studentCode: `TQ-${uuid().slice(0, 8)}`,
+    programStartDate: null,
     fullName: "Repo Test Student",
     locationId,
+    angkatanId: null,
     nikEncrypted: null,
     guardianName: null,
     address: null,
@@ -79,9 +81,9 @@ describe("MysqlStudentRepository", () => {
       ),
     ).toEqual([student.id]);
     expect(
-      (await repo.list({ status: "ACTIVE" }, { page: 1, pageSize: 50 })).data.some(
-        (s) => s.id === student.id,
-      ),
+      (
+        await repo.list({ status: "ACTIVE", name: marker }, { page: 1, pageSize: 50 })
+      ).data.some((s) => s.id === student.id),
     ).toBe(true);
     expect(
       (await repo.list({ locationId }, { page: 1, pageSize: 50 })).data.some(

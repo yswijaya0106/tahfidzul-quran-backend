@@ -3,10 +3,14 @@ import {
   DashboardRepository,
   DateRange,
   LocationDashboardData,
+  LocationOverviewItem,
   StudentDashboardData,
+  StudentMemorizationProgressRow,
+  TodayActivityPhotoRow,
 } from "../../domain/repositories/dashboardRepository";
 import { AssessmentType } from "../../domain/entities/assessment";
 import { Grade } from "../../domain/entities/grade";
+import { LocationStatus } from "../../domain/entities/location";
 
 const TYPES: AssessmentType[] = ["NEW_MEMORIZATION", "MUROJAAH"];
 
@@ -65,8 +69,14 @@ export class MysqlDashboardRepository implements DashboardRepository {
     );
 
     const [activityRows] = await this.pool.query<RowDataPacket[]>(
-      `SELECT id AS activity_id, title, activity_date FROM activities
-       WHERE location_id = ? AND deleted_at IS NULL ORDER BY activity_date DESC LIMIT 10`,
+      `SELECT a.id AS activity_id, a.title, a.activity_date, p.object_key AS thumbnail_object_key
+       FROM activities a
+       LEFT JOIN activity_photos p
+         ON p.activity_id = a.id AND p.deleted_at IS NULL AND p.display_order = (
+           SELECT MIN(p2.display_order) FROM activity_photos p2
+           WHERE p2.activity_id = a.id AND p2.deleted_at IS NULL
+         )
+       WHERE a.location_id = ? AND a.deleted_at IS NULL ORDER BY a.activity_date DESC LIMIT 10`,
       [locationId],
     );
 
@@ -102,11 +112,17 @@ export class MysqlDashboardRepository implements DashboardRepository {
         studentCode: row.student_code,
       })),
       recentActivities: (
-        activityRows as { activity_id: string; title: string; activity_date: Date }[]
+        activityRows as {
+          activity_id: string;
+          title: string;
+          activity_date: Date;
+          thumbnail_object_key: string | null;
+        }[]
       ).map((row) => ({
         activityId: row.activity_id,
         title: row.title,
         activityDate: row.activity_date.toISOString().slice(0, 10),
+        thumbnailObjectKey: row.thumbnail_object_key,
       })),
       topStudents: (
         topStudentRows as {
@@ -168,5 +184,168 @@ export class MysqlDashboardRepository implements DashboardRepository {
       coveredRanges,
       distributionByGrade,
     };
+  }
+
+  async getLocationsOverview(date: string): Promise<LocationOverviewItem[]> {
+    const [rows] = await this.pool.query<RowDataPacket[]>(
+      `SELECT
+         l.id AS location_id,
+         l.name AS location_name,
+         l.kab_kota AS kab_kota,
+         l.status AS status,
+         (SELECT COUNT(*) FROM students s
+           WHERE s.location_id = l.id AND s.status = 'ACTIVE' AND s.deleted_at IS NULL) AS active_student_count,
+         (SELECT COUNT(*) FROM memorization_assessments a
+           WHERE a.location_id = l.id AND a.deleted_at IS NULL AND a.assessment_date = ?) AS assessments_today,
+         (SELECT COUNT(*) FROM activities act
+           WHERE act.location_id = l.id AND act.deleted_at IS NULL AND act.activity_date = ?) AS activities_today,
+         (SELECT COUNT(*) FROM activity_photos p
+           JOIN activities act2 ON act2.id = p.activity_id
+           WHERE act2.location_id = l.id AND act2.activity_date = ? AND p.deleted_at IS NULL) AS photos_today,
+         (SELECT MAX(a3.created_at) FROM memorization_assessments a3
+           WHERE a3.location_id = l.id AND a3.deleted_at IS NULL) AS last_assessment_at,
+         (SELECT MAX(act3.created_at) FROM activities act3
+           WHERE act3.location_id = l.id AND act3.deleted_at IS NULL) AS last_activity_at
+       FROM locations l
+       WHERE l.deleted_at IS NULL
+       ORDER BY l.name ASC`,
+      [date, date, date],
+    );
+
+    return (
+      rows as {
+        location_id: string;
+        location_name: string;
+        kab_kota: string | null;
+        status: LocationStatus;
+        active_student_count: number;
+        assessments_today: number;
+        activities_today: number;
+        photos_today: number;
+        last_assessment_at: Date | null;
+        last_activity_at: Date | null;
+      }[]
+    ).map((row) => ({
+      locationId: row.location_id,
+      locationName: row.location_name,
+      kabKota: row.kab_kota,
+      status: row.status,
+      activeStudentCount: Number(row.active_student_count),
+      assessmentsToday: Number(row.assessments_today),
+      activitiesToday: Number(row.activities_today),
+      photosToday: Number(row.photos_today),
+      lastAssessmentAt: row.last_assessment_at ? row.last_assessment_at.toISOString() : null,
+      lastActivityAt: row.last_activity_at ? row.last_activity_at.toISOString() : null,
+    }));
+  }
+
+  async getTodayMemorizationProgress(date: string): Promise<StudentMemorizationProgressRow[]> {
+    const [rows] = await this.pool.query<RowDataPacket[]>(
+      `SELECT
+         s.id AS student_id,
+         s.full_name,
+         s.student_code,
+         s.location_id,
+         l.name AS location_name,
+         l.kab_kota AS kab_kota,
+         a.assessment_date,
+         a.end_surah_number AS achieved_end_surah_number,
+         a.end_verse_number AS achieved_end_verse_number,
+         a.day_number,
+         dt.end_surah_number AS target_end_surah_number,
+         dt.end_verse_number AS target_end_verse_number
+       FROM students s
+       JOIN locations l ON l.id = s.location_id
+       JOIN memorization_assessments a ON a.id = (
+         SELECT a2.id FROM memorization_assessments a2
+         WHERE a2.student_id = s.id
+           AND a2.assessment_type = 'NEW_MEMORIZATION'
+           AND a2.deleted_at IS NULL
+           AND a2.assessment_date = ?
+         ORDER BY a2.created_at DESC
+         LIMIT 1
+       )
+       LEFT JOIN daily_targets dt ON dt.day_number = a.day_number
+       WHERE s.status = 'ACTIVE' AND s.deleted_at IS NULL
+       ORDER BY l.name ASC, s.full_name ASC`,
+      [date],
+    );
+
+    return (
+      rows as {
+        student_id: string;
+        full_name: string;
+        student_code: string;
+        location_id: string;
+        location_name: string;
+        kab_kota: string | null;
+        assessment_date: Date;
+        achieved_end_surah_number: number;
+        achieved_end_verse_number: number;
+        day_number: number | null;
+        target_end_surah_number: number | null;
+        target_end_verse_number: number | null;
+      }[]
+    ).map((row) => ({
+      studentId: row.student_id,
+      fullName: row.full_name,
+      studentCode: row.student_code,
+      locationId: row.location_id,
+      locationName: row.location_name,
+      kabKota: row.kab_kota,
+      assessmentDate: row.assessment_date.toISOString().slice(0, 10),
+      achievedEndSurahNumber: Number(row.achieved_end_surah_number),
+      achievedEndVerseNumber: Number(row.achieved_end_verse_number),
+      dayNumber: row.day_number === null ? null : Number(row.day_number),
+      targetEndSurahNumber:
+        row.target_end_surah_number === null ? null : Number(row.target_end_surah_number),
+      targetEndVerseNumber:
+        row.target_end_verse_number === null ? null : Number(row.target_end_verse_number),
+    }));
+  }
+
+  async getTodayActivityPhotos(date: string): Promise<TodayActivityPhotoRow[]> {
+    const [rows] = await this.pool.query<RowDataPacket[]>(
+      `SELECT
+         p.id AS photo_id,
+         p.object_key AS object_key,
+         p.caption AS caption,
+         p.created_at AS uploaded_at,
+         a.id AS activity_id,
+         a.title AS activity_title,
+         l.id AS location_id,
+         l.name AS location_name,
+         l.kab_kota AS kab_kota
+       FROM activity_photos p
+       JOIN activities a ON a.id = p.activity_id AND a.deleted_at IS NULL
+       JOIN locations l ON l.id = a.location_id AND l.deleted_at IS NULL
+       WHERE a.activity_date = ? AND p.deleted_at IS NULL
+       ORDER BY p.created_at DESC`,
+      [date],
+    );
+
+    return (
+      rows as {
+        photo_id: string;
+        object_key: string;
+        caption: string | null;
+        uploaded_at: Date;
+        activity_id: string;
+        activity_title: string;
+        location_id: string;
+        location_name: string;
+        kab_kota: string | null;
+      }[]
+    ).map((row) => ({
+      photoId: row.photo_id,
+      objectKey: row.object_key,
+      caption: row.caption,
+      uploadedAt: row.uploaded_at.toISOString(),
+      activityId: row.activity_id,
+      activityTitle: row.activity_title,
+      locationId: row.location_id,
+      locationName: row.location_name,
+      kabKota: row.kab_kota,
+    }));
   }
 }

@@ -1,0 +1,56 @@
+-- Days 79-124: rest of Al-A'raf, all of Al-Anfal, At-Tawbah, Yunus, Hud, Yusuf,
+-- into the start of Ar-Ra'd. Unlike the Ali 'Imran/An-Nisa block, this source
+-- photo's digits read cleanly with no reversal needed; continuity is validated
+-- day-to-day and lands exactly on three known surah-end boundaries: day 87 ends
+-- Al-A'raf at verse 206, day 92 ends Al-Anfal at verse 75, day 123 ends Yusuf at
+-- verse 111 (all matching docs/quran-surah-reference.md). Note: the source prints
+-- a 1-verse gap between day 86 (ends 187) and day 87 (starts 189) - kept as printed.
+INSERT INTO daily_targets
+  (day_number, start_surah_number, start_verse_number, end_surah_number, end_verse_number)
+VALUES
+  (79, 7, 68, 7, 81),
+  (80, 7, 82, 7, 95),
+  (81, 7, 96, 7, 120),
+  (82, 7, 121, 7, 137),
+  (83, 7, 138, 7, 149),
+  (84, 7, 150, 7, 159),
+  (85, 7, 160, 7, 170),
+  (86, 7, 171, 7, 187),
+  (87, 7, 189, 7, 206),
+  (88, 8, 1, 8, 16),
+  (89, 8, 17, 8, 33),
+  (90, 8, 34, 8, 45),
+  (91, 8, 46, 8, 61),
+  (92, 8, 62, 8, 75),
+  (93, 9, 1, 9, 13),
+  (94, 9, 14, 9, 26),
+  (95, 9, 27, 9, 36),
+  (96, 9, 37, 9, 47),
+  (97, 9, 48, 9, 61),
+  (98, 9, 62, 9, 72),
+  (99, 9, 73, 9, 86),
+  (100, 9, 87, 9, 99),
+  (101, 9, 100, 9, 111),
+  (102, 9, 112, 9, 122),
+  (103, 9, 123, 10, 6),
+  (104, 10, 7, 10, 20),
+  (105, 10, 21, 10, 33),
+  (106, 10, 34, 10, 53),
+  (107, 10, 54, 10, 70),
+  (108, 10, 71, 10, 88),
+  (109, 10, 89, 10, 106),
+  (110, 10, 107, 11, 12),
+  (111, 11, 13, 11, 28),
+  (112, 11, 29, 11, 45),
+  (113, 11, 46, 11, 62),
+  (114, 11, 63, 11, 81),
+  (115, 11, 82, 11, 97),
+  (116, 11, 98, 11, 117),
+  (117, 11, 118, 12, 14),
+  (118, 12, 15, 12, 30),
+  (119, 12, 31, 12, 43),
+  (120, 12, 44, 12, 63),
+  (121, 12, 64, 12, 78),
+  (122, 12, 79, 12, 95),
+  (123, 12, 96, 12, 111),
+  (124, 13, 1, 13, 13);

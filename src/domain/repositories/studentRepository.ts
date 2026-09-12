@@ -7,6 +7,7 @@ export interface StudentFilters {
   phone?: string;
   locationId?: string;
   locationIds?: string[];
+  angkatanId?: string;
   status?: StudentStatus;
 }
 

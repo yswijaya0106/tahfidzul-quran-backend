@@ -13,6 +13,10 @@ interface LocationRow extends RowDataPacket {
   id: string;
   name: string;
   address: string;
+  provinsi: string | null;
+  kab_kota: string | null;
+  kecamatan: string | null;
+  kode_pos: string | null;
   latitude: string | null;
   longitude: string | null;
   phone: string | null;
@@ -37,6 +41,10 @@ function mapLocation(row: LocationRow): Location {
     id: row.id,
     name: row.name,
     address: row.address,
+    provinsi: row.provinsi,
+    kabKota: row.kab_kota,
+    kecamatan: row.kecamatan,
+    kodePos: row.kode_pos,
     latitude: row.latitude !== null ? Number(row.latitude) : null,
     longitude: row.longitude !== null ? Number(row.longitude) : null,
     phone: row.phone,
@@ -127,12 +135,16 @@ export class MysqlLocationRepository implements LocationRepository {
     await withTransaction(this.pool, async (connection) => {
       await connection.query(
         `INSERT INTO locations
-          (id, name, address, latitude, longitude, phone, description, cover_photo_object_key, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          (id, name, address, provinsi, kab_kota, kecamatan, kode_pos, latitude, longitude, phone, description, cover_photo_object_key, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           location.id,
           location.name,
           location.address,
+          location.provinsi,
+          location.kabKota,
+          location.kecamatan,
+          location.kodePos,
           location.latitude,
           location.longitude,
           location.phone,
@@ -158,6 +170,10 @@ export class MysqlLocationRepository implements LocationRepository {
     const columnMap: Record<string, unknown> = {
       name: patch.name,
       address: patch.address,
+      provinsi: patch.provinsi,
+      kab_kota: patch.kabKota,
+      kecamatan: patch.kecamatan,
+      kode_pos: patch.kodePos,
       latitude: patch.latitude,
       longitude: patch.longitude,
       phone: patch.phone,

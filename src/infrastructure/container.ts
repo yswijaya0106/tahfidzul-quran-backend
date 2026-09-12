@@ -15,6 +15,10 @@ import { MysqlActivityRepository } from "./repositories/mysqlActivityRepository"
 import { MysqlAuditLogRepository } from "./repositories/mysqlAuditLogRepository";
 import { MysqlDashboardRepository } from "./repositories/mysqlDashboardRepository";
 import { MysqlIkhtibarRepository } from "./repositories/mysqlIkhtibarRepository";
+import { MysqlRefProvinceRepository } from "./repositories/mysqlRefProvinceRepository";
+import { MysqlRefCityRepository } from "./repositories/mysqlRefCityRepository";
+import { MysqlAngkatanRepository } from "./repositories/mysqlAngkatanRepository";
+import { MysqlDailyTargetRepository } from "./repositories/mysqlDailyTargetRepository";
 
 import { LoginUseCase } from "../application/auth/loginUseCase";
 import { RefreshUseCase } from "../application/auth/refreshUseCase";
@@ -28,6 +32,9 @@ import { QuranUseCases } from "../application/quran/quranUseCases";
 import { DashboardUseCases } from "../application/dashboard/dashboardUseCases";
 import { FileUseCases } from "../application/files/fileUseCases";
 import { IkhtibarUseCases } from "../application/ikhtibar/ikhtibarUseCases";
+import { RefDataUseCases } from "../application/refData/refDataUseCases";
+import { AngkatanUseCases } from "../application/angkatan/angkatanUseCases";
+import { DailyTargetUseCases } from "../application/dailyTargets/dailyTargetUseCases";
 
 export interface Container {
   pool: Pool;
@@ -47,6 +54,9 @@ export interface Container {
   dashboardUseCases: DashboardUseCases;
   fileUseCases: FileUseCases;
   ikhtibarUseCases: IkhtibarUseCases;
+  refDataUseCases: RefDataUseCases;
+  angkatanUseCases: AngkatanUseCases;
+  dailyTargetUseCases: DailyTargetUseCases;
 }
 
 export async function buildContainer(): Promise<Container> {
@@ -70,6 +80,10 @@ export async function buildContainer(): Promise<Container> {
   const auditLogRepository = new MysqlAuditLogRepository(pool);
   const dashboardRepository = new MysqlDashboardRepository(pool);
   const ikhtibarRepository = new MysqlIkhtibarRepository(pool);
+  const refProvinceRepository = new MysqlRefProvinceRepository(pool);
+  const refCityRepository = new MysqlRefCityRepository(pool);
+  const angkatanRepository = new MysqlAngkatanRepository(pool);
+  const dailyTargetRepository = new MysqlDailyTargetRepository(pool);
 
   await quranRepository.warmCache();
 
@@ -107,6 +121,7 @@ export async function buildContainer(): Promise<Container> {
     studentUseCases: new StudentUseCases(
       studentRepository,
       locationRepository,
+      angkatanRepository,
       auditLogRepository,
       fieldEncryptor,
       clock,
@@ -124,9 +139,15 @@ export async function buildContainer(): Promise<Container> {
       locationRepository,
       auditLogRepository,
       clock,
+      objectStorage,
     ),
     quranUseCases: new QuranUseCases(quranRepository),
-    dashboardUseCases: new DashboardUseCases(dashboardRepository, studentRepository, clock),
+    dashboardUseCases: new DashboardUseCases(
+      dashboardRepository,
+      studentRepository,
+      clock,
+      objectStorage,
+    ),
     fileUseCases: new FileUseCases(objectStorage),
     ikhtibarUseCases: new IkhtibarUseCases(
       ikhtibarRepository,
@@ -135,5 +156,13 @@ export async function buildContainer(): Promise<Container> {
       clock,
       config.assessmentClockSkewMinutes,
     ),
+    refDataUseCases: new RefDataUseCases(refProvinceRepository, refCityRepository),
+    angkatanUseCases: new AngkatanUseCases(
+      angkatanRepository,
+      locationRepository,
+      auditLogRepository,
+      clock,
+    ),
+    dailyTargetUseCases: new DailyTargetUseCases(dailyTargetRepository, quranRepository),
   };
 }

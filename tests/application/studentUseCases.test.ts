@@ -52,6 +52,12 @@ class FakeLocationRepository {
   async softDelete() {}
 }
 
+class FakeAngkatanRepository {
+  async findById() {
+    return null;
+  }
+}
+
 class FakeAuditLogRepository {
   entries: unknown[] = [];
   async record(entry: unknown) {
@@ -71,10 +77,12 @@ class FakeEncryptor {
 function buildUseCase() {
   const students = new FakeStudentRepository();
   const locations = new FakeLocationRepository();
+  const angkatan = new FakeAngkatanRepository();
   const auditLogs = new FakeAuditLogRepository();
   const useCase = new StudentUseCases(
     students as never,
     locations as never,
+    angkatan as never,
     auditLogs as never,
     new FakeEncryptor(),
     { nowIso: () => "2026-01-01T00:00:00.000Z" },
@@ -93,6 +101,10 @@ const activeLocation: Location = {
   id: "location-a",
   name: "Location A",
   address: "Street",
+  provinsi: null,
+  kabKota: null,
+  kecamatan: null,
+  kodePos: null,
   latitude: null,
   longitude: null,
   phone: null,
@@ -112,8 +124,10 @@ function makeStudent(
   return {
     id,
     studentCode: "TQ-0001",
+    programStartDate: null,
     fullName: "Test Student",
     locationId,
+    angkatanId: null,
     nikEncrypted,
     guardianName: null,
     address: null,

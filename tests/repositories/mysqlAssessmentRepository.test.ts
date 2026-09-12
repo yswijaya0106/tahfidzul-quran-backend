@@ -31,6 +31,7 @@ function makeAssessment(overrides: Partial<MemorizationAssessment> = {}): Memori
     studentId,
     locationId,
     assessmentDate: "2026-01-10T00:00:00.000Z",
+    dayNumber: null,
     assessmentType: "NEW_MEMORIZATION",
     startSurahNumber: 1,
     startVerseNumber: 1,
@@ -84,9 +85,9 @@ describe("MysqlAssessmentRepository", () => {
       meta: { page: 1, pageSize: 50, total: 0 },
     });
     expect(
-      (await repo.list({ assessmentType: "MUROJAAH" }, { page: 1, pageSize: 50 })).data.some(
-        (a) => a.id === assessment.id,
-      ),
+      (
+        await repo.list({ studentId, assessmentType: "MUROJAAH" }, { page: 1, pageSize: 50 })
+      ).data.some((a) => a.id === assessment.id),
     ).toBe(true);
     expect(
       (

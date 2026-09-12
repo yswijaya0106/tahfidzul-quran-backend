@@ -77,12 +77,13 @@ export async function createLocationRow(pool: Pool, overrides: Record<string, un
   const id = uuid();
   const now = new Date().toISOString().slice(0, 19).replace("T", " ");
   await pool.query(
-    `INSERT INTO locations (id, name, address, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO locations (id, name, address, kab_kota, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       overrides.name ?? `Location ${id.slice(0, 8)}`,
       overrides.address ?? "Street",
+      overrides.kabKota ?? null,
       overrides.status ?? "ACTIVE",
       now,
       now,

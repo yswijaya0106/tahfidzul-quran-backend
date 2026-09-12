@@ -70,6 +70,41 @@ describe("locations routes", () => {
     expect(getAfterDelete.statusCode).toBe(404);
   });
 
+  it("creates and updates a location with structured address fields", async () => {
+    const name = `Address Test Location ${uuid()}`;
+    const createRes = await ctx.app.inject({
+      method: "POST",
+      url: "/api/v1/locations",
+      headers: authHeader(ctx.adminToken),
+      payload: {
+        name,
+        address: "Jl. Contoh No. 1, Kelurahan Contoh, Kecamatan Contoh, Kota Contoh, Jawa Barat 40123",
+        provinsi: "Jawa Barat",
+        kabKota: "Kota Contoh",
+        kecamatan: "Kecamatan Contoh",
+        kodePos: "40123",
+      },
+    });
+    expect(createRes.statusCode).toBe(201);
+    const location = createRes.json().data;
+    expect(location).toMatchObject({
+      provinsi: "Jawa Barat",
+      kabKota: "Kota Contoh",
+      kecamatan: "Kecamatan Contoh",
+      kodePos: "40123",
+    });
+
+    const patchRes = await ctx.app.inject({
+      method: "PATCH",
+      url: `/api/v1/locations/${location.id}`,
+      headers: authHeader(ctx.adminToken),
+      payload: { kodePos: "40199" },
+    });
+    expect(patchRes.statusCode).toBe(200);
+    expect(patchRes.json().data.kodePos).toBe("40199");
+    expect(patchRes.json().data.provinsi).toBe("Jawa Barat");
+  });
+
   it("rejects create/update/delete for a non-admin operator", async () => {
     const operator = await createOperator(ctx);
     const res = await ctx.app.inject({

@@ -3,8 +3,10 @@ export type StudentStatus = "ACTIVE" | "ARCHIVED";
 export interface Student {
   id: string;
   studentCode: string;
+  programStartDate: string | null;
   fullName: string;
   locationId: string;
+  angkatanId: string | null;
   nikEncrypted: string | null;
   guardianName: string | null;
   address: string | null;

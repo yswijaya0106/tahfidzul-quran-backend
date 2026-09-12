@@ -108,8 +108,10 @@ function buildUseCase(students: Student[]) {
 const student: Student = {
   id: "student-1",
   studentCode: "TQ-0001",
+  programStartDate: null,
   fullName: "Test Student",
   locationId: "location-a",
+  angkatanId: null,
   nikEncrypted: null,
   guardianName: null,
   address: null,
@@ -217,5 +219,35 @@ describe("AssessmentUseCases", () => {
     expect(updated.grade).toBe(validInput.grade);
     expect(updated.notes).toBe("original");
     expect(updated.endVerseNumber).toBe(6);
+  });
+
+  it("lists daily submissions for a location an operator is assigned to", async () => {
+    const { useCase } = buildUseCase([student]);
+    const operator: AuthContext = {
+      userId: "operator-1",
+      role: "LOCATION_OPERATOR",
+      assignedLocationIds: ["location-a"],
+    };
+
+    const result = await useCase.listForLocation(
+      operator,
+      "location-a",
+      {},
+      { page: 1, pageSize: 20 },
+    );
+    expect(result.meta.page).toBe(1);
+  });
+
+  it("rejects listing a location's daily submissions for an operator outside its scope", async () => {
+    const { useCase } = buildUseCase([student]);
+    const operator: AuthContext = {
+      userId: "operator-2",
+      role: "LOCATION_OPERATOR",
+      assignedLocationIds: ["location-b"],
+    };
+
+    await expect(
+      useCase.listForLocation(operator, "location-a", {}, { page: 1, pageSize: 20 }),
+    ).rejects.toMatchObject({ status: 403 });
   });
 });

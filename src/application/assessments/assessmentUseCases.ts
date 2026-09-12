@@ -11,7 +11,9 @@ import {
   AssessmentGrade,
   AssessmentType,
   MemorizationAssessment,
+  MemorizationAssessmentWithTarget,
 } from "../../domain/entities/assessment";
+import { computeDayNumber, computeTargetStatus, TargetStatus } from "../../domain/entities/dailyTarget";
 import {
   validateAssessmentDate,
   validateAssessmentRange,
@@ -40,6 +42,20 @@ export interface UpdateAssessmentInput {
   endVerseNumber?: number;
   grade?: AssessmentGrade;
   notes?: string | null;
+}
+
+export type PublicAssessment = MemorizationAssessmentWithTarget & { targetStatus: TargetStatus };
+
+function toPublicAssessment(assessment: MemorizationAssessmentWithTarget): PublicAssessment {
+  return {
+    ...assessment,
+    targetStatus: computeTargetStatus(
+      assessment.endSurahNumber,
+      assessment.endVerseNumber,
+      assessment.targetEndSurahNumber,
+      assessment.targetEndVerseNumber,
+    ),
+  };
 }
 
 export class AssessmentUseCases {
@@ -71,20 +87,32 @@ export class AssessmentUseCases {
     studentId: string,
     filters: Omit<AssessmentFilters, "studentId">,
     page: PageRequest,
-  ): Promise<ListResult<MemorizationAssessment>> {
+  ): Promise<ListResult<PublicAssessment>> {
     await this.loadScopedStudent(auth, studentId);
-    return this.assessments.list({ ...filters, studentId }, page);
+    const result = await this.assessments.list({ ...filters, studentId }, page);
+    return { data: result.data.map(toPublicAssessment), meta: result.meta };
   }
 
-  async getById(auth: AuthContext, id: string): Promise<MemorizationAssessment> {
-    return this.loadScopedAssessment(auth, id);
+  async listForLocation(
+    auth: AuthContext,
+    locationId: string,
+    filters: Omit<AssessmentFilters, "studentId" | "locationId" | "locationIds">,
+    page: PageRequest,
+  ): Promise<ListResult<PublicAssessment>> {
+    assertLocationScope(auth, locationId);
+    const result = await this.assessments.list({ ...filters, locationId }, page);
+    return { data: result.data.map(toPublicAssessment), meta: result.meta };
+  }
+
+  async getById(auth: AuthContext, id: string): Promise<PublicAssessment> {
+    return toPublicAssessment(await this.loadScopedAssessment(auth, id));
   }
 
   async create(
     auth: AuthContext,
     studentId: string,
     input: CreateAssessmentInput,
-  ): Promise<MemorizationAssessment> {
+  ): Promise<PublicAssessment> {
     const student = await this.loadScopedStudent(auth, studentId);
 
     validateAssessmentDate(input.assessmentDate, this.clock.nowIso(), this.clockSkewMinutes);
@@ -100,6 +128,7 @@ export class AssessmentUseCases {
       studentId,
       locationId: student.locationId,
       assessmentDate: input.assessmentDate,
+      dayNumber: computeDayNumber(input.assessmentDate, student.programStartDate),
       assessmentType: input.assessmentType,
       startSurahNumber: input.startSurahNumber,
       startVerseNumber: input.startVerseNumber,
@@ -133,14 +162,14 @@ export class AssessmentUseCases {
       createdAt: now,
     });
 
-    return assessment;
+    return toPublicAssessment((await this.assessments.findById(assessment.id))!);
   }
 
   async update(
     auth: AuthContext,
     id: string,
     input: UpdateAssessmentInput,
-  ): Promise<MemorizationAssessment> {
+  ): Promise<PublicAssessment> {
     const existing = await this.loadScopedAssessment(auth, id);
 
     const next = {
@@ -161,8 +190,11 @@ export class AssessmentUseCases {
       this.quran,
     );
 
+    const student = await this.students.findById(existing.studentId);
+    const dayNumber = computeDayNumber(next.assessmentDate, student?.programStartDate ?? null);
+
     const now = this.clock.nowIso();
-    const patch = { ...next, updatedAt: now };
+    const patch = { ...next, dayNumber, updatedAt: now };
     await this.assessments.update(id, patch);
 
     await this.assessments.addRevision({
@@ -184,7 +216,7 @@ export class AssessmentUseCases {
       createdAt: now,
     });
 
-    return { ...existing, ...patch };
+    return toPublicAssessment((await this.assessments.findById(id))!);
   }
 
   async archive(auth: AuthContext, id: string): Promise<void> {

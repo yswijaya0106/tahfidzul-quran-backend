@@ -7,6 +7,14 @@ import { Activity, ActivityPhoto } from "../../domain/entities/activity";
 import { PageRequest, ListResult } from "../../shared/pagination";
 import { AuthContext, assertAdmin, assertLocationScope } from "../authz/authContext";
 import { Clock } from "../auth/ports";
+import { ObjectStorage } from "../files/ports";
+
+export interface ActivityPhotoView {
+  id: string;
+  url: string;
+  caption: string | null;
+  displayOrder: number;
+}
 
 const ALLOWED_PHOTO_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_PHOTO_SIZE_BYTES = 10 * 1024 * 1024;
@@ -69,6 +77,7 @@ export class ActivityUseCases {
     private readonly locations: LocationRepository,
     private readonly auditLogs: AuditLogRepository,
     private readonly clock: Clock,
+    private readonly objectStorage: ObjectStorage,
   ) {}
 
   async listForLocation(
@@ -86,6 +95,26 @@ export class ActivityUseCases {
     if (!activity || activity.deletedAt) throw AppError.notFound("Activity not found.");
     assertLocationScope(auth, activity.locationId);
     return activity;
+  }
+
+  /** Signed view URLs for an activity's photos, fetched only on demand (not
+   * embedded in the activity list) so browsing many locations stays cheap. */
+  async getPhotos(auth: AuthContext, activityId: string): Promise<ActivityPhotoView[]> {
+    const activity = await this.activities.findById(activityId);
+    if (!activity || activity.deletedAt) throw AppError.notFound("Activity not found.");
+    assertLocationScope(auth, activity.locationId);
+
+    const photos = await this.activities.listPhotos(activityId);
+    return Promise.all(
+      photos
+        .filter((photo) => !photo.deletedAt)
+        .map(async (photo) => ({
+          id: photo.id,
+          url: await this.objectStorage.createSignedDownloadUrl(photo.objectKey),
+          caption: photo.caption,
+          displayOrder: photo.displayOrder,
+        })),
+    );
   }
 
   async create(auth: AuthContext, input: CreateActivityInput): Promise<Activity> {

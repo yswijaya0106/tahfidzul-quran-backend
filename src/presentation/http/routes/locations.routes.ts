@@ -12,6 +12,10 @@ const memberSchema = z.object({
 const createLocationSchema = z.object({
   name: z.string().min(2).max(150),
   address: z.string().min(1),
+  provinsi: z.string().max(100).nullish(),
+  kabKota: z.string().max(100).nullish(),
+  kecamatan: z.string().max(100).nullish(),
+  kodePos: z.string().max(10).nullish(),
   latitude: z.number().nullish(),
   longitude: z.number().nullish(),
   phone: z.string().max(32).nullish(),

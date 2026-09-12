@@ -7,8 +7,10 @@ import { toSqlDateTime } from "../db/dateTime";
 interface StudentRow extends RowDataPacket {
   id: string;
   student_code: string;
+  program_start_date: Date | null;
   full_name: string;
   location_id: string;
+  angkatan_id: string | null;
   nik_encrypted: string | null;
   guardian_name: string | null;
   address: string | null;
@@ -39,8 +41,12 @@ function mapStudent(row: StudentRow): Student {
   return {
     id: row.id,
     studentCode: row.student_code,
+    programStartDate: row.program_start_date
+      ? row.program_start_date.toISOString().slice(0, 10)
+      : null,
     fullName: row.full_name,
     locationId: row.location_id,
+    angkatanId: row.angkatan_id,
     nikEncrypted: row.nik_encrypted,
     guardianName: row.guardian_name,
     address: row.address,
@@ -110,6 +116,10 @@ export class MysqlStudentRepository implements StudentRepository {
       conditions.push("location_id = ?");
       params.push(filters.locationId);
     }
+    if (filters.angkatanId) {
+      conditions.push("angkatan_id = ?");
+      params.push(filters.angkatanId);
+    }
     if (filters.locationIds) {
       if (filters.locationIds.length === 0) {
         return { data: [], meta: { page: page.page, pageSize: page.pageSize, total: 0 } };
@@ -139,14 +149,16 @@ export class MysqlStudentRepository implements StudentRepository {
   async create(student: Student): Promise<void> {
     await this.pool.query(
       `INSERT INTO students
-        (id, student_code, full_name, location_id, nik_encrypted, guardian_name, address,
+        (id, student_code, program_start_date, full_name, location_id, angkatan_id, nik_encrypted, guardian_name, address,
          student_phone, guardian_phone, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         student.id,
         student.studentCode,
+        student.programStartDate,
         student.fullName,
         student.locationId,
+        student.angkatanId,
         student.nikEncrypted,
         student.guardianName,
         student.address,
@@ -161,7 +173,9 @@ export class MysqlStudentRepository implements StudentRepository {
 
   async update(id: string, patch: Partial<Student>): Promise<void> {
     const columnMap: Record<string, unknown> = {
+      program_start_date: patch.programStartDate,
       full_name: patch.fullName,
+      angkatan_id: patch.angkatanId,
       nik_encrypted: patch.nikEncrypted,
       guardian_name: patch.guardianName,
       address: patch.address,

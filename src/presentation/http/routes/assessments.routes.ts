@@ -20,9 +20,32 @@ const createAssessmentSchema = z.object({
 const updateAssessmentSchema = createAssessmentSchema.partial();
 
 const studentIdParams = z.object({ id: z.string().uuid() });
+const locationIdParams = z.object({ id: z.string().uuid() });
 const assessmentIdParams = z.object({ id: z.string().uuid() });
 
 export default async function assessmentsRoutes(fastify: FastifyInstance): Promise<void> {
+  fastify.get(
+    "/api/v1/locations/:id/assessments",
+    { preHandler: fastify.authenticate },
+    async (request) => {
+      /* v8 ignore next */
+      if (!request.auth) throw AppError.unauthenticated();
+      const { id } = locationIdParams.parse(request.params);
+      const query = request.query as Record<string, string>;
+      const page = parsePageRequest(query);
+      return fastify.container.assessmentUseCases.listForLocation(
+        request.auth,
+        id,
+        {
+          assessmentType: query.assessmentType as "NEW_MEMORIZATION" | "MUROJAAH" | undefined,
+          dateFrom: query.dateFrom,
+          dateTo: query.dateTo,
+        },
+        page,
+      );
+    },
+  );
+
   fastify.get(
     "/api/v1/students/:id/assessments",
     { preHandler: fastify.authenticate },

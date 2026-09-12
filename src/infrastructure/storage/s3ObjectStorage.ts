@@ -52,6 +52,11 @@ export class S3ObjectStorage implements ObjectStorage {
   }
 
   async createSignedDownloadUrl(objectKey: string): Promise<string> {
+    // A handful of demo/seed photos reference an already-public URL directly
+    // rather than a bucket key (there's nothing to sign for those).
+    if (objectKey.startsWith("http://") || objectKey.startsWith("https://")) {
+      return objectKey;
+    }
     const command = new GetObjectCommand({ Bucket: this.config.bucket, Key: objectKey });
     return getSignedUrl(this.client, command, { expiresIn: this.config.signedUrlTtlSeconds });
   }

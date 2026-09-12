@@ -12,6 +12,10 @@ export interface Location {
   id: string;
   name: string;
   address: string;
+  provinsi: string | null;
+  kabKota: string | null;
+  kecamatan: string | null;
+  kodePos: string | null;
   latitude: number | null;
   longitude: number | null;
   phone: string | null;

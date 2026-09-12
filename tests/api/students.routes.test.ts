@@ -103,6 +103,45 @@ describe("students routes", () => {
     expect(res.statusCode).toBe(403);
   });
 
+  it("returns a combined profile with memorization progress", async () => {
+    const createRes = await ctx.app.inject({
+      method: "POST",
+      url: "/api/v1/students",
+      headers: authHeader(ctx.adminToken),
+      payload: { fullName: "Profile Test Student", locationId },
+    });
+    const student = createRes.json().data;
+
+    const res = await ctx.app.inject({
+      method: "GET",
+      url: `/api/v1/students/${student.id}/profile`,
+      headers: authHeader(ctx.adminToken),
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json().data;
+    expect(body.profile.fullName).toBe("Profile Test Student");
+    expect(body.progress).toHaveProperty("distributionByGrade");
+    expect(body.progress).toHaveProperty("history");
+  });
+
+  it("rejects a profile fetch for an operator outside the location scope", async () => {
+    const createRes = await ctx.app.inject({
+      method: "POST",
+      url: "/api/v1/students",
+      headers: authHeader(ctx.adminToken),
+      payload: { fullName: "Scoped Profile Student", locationId },
+    });
+    const student = createRes.json().data;
+    const operator = await createOperator(ctx, []);
+
+    const res = await ctx.app.inject({
+      method: "GET",
+      url: `/api/v1/students/${student.id}/profile`,
+      headers: authHeader(operator.token),
+    });
+    expect(res.statusCode).toBe(403);
+  });
+
   it("returns a validation error for an invalid payload", async () => {
     const res = await ctx.app.inject({
       method: "POST",

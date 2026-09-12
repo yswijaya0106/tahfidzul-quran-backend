@@ -64,6 +64,13 @@ describe("S3ObjectStorage", () => {
     expect(url).toBe("https://download-url");
   });
 
+  it("returns an already-public URL as-is instead of signing it", async () => {
+    const storage = new S3ObjectStorage(config);
+    const url = await storage.createSignedDownloadUrl("https://example.com/photo.jpg");
+    expect(url).toBe("https://example.com/photo.jpg");
+    expect(getSignedUrlMock).not.toHaveBeenCalled();
+  });
+
   it("returns object metadata when headObject succeeds", async () => {
     sendMock.mockResolvedValue({ ContentLength: 2048, ContentType: "image/png" });
     const storage = new S3ObjectStorage(config);

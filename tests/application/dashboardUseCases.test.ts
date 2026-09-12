@@ -10,6 +10,83 @@ class FakeDashboardRepository {
   async getStudentDashboard() {
     return { latestAssessments: [] };
   }
+  async getLocationsOverview() {
+    return [
+      {
+        locationId: "location-a",
+        locationName: "Location A",
+        kabKota: "Kota A",
+        status: "ACTIVE" as const,
+        activeStudentCount: 3,
+        assessmentsToday: 1,
+        activitiesToday: 0,
+        photosToday: 0,
+        lastAssessmentAt: null,
+        lastActivityAt: null,
+      },
+    ];
+  }
+  async getTodayMemorizationProgress() {
+    return [
+      {
+        studentId: "student-reached",
+        fullName: "Reached Student",
+        studentCode: "TQ-0001",
+        locationId: "location-a",
+        locationName: "Location A",
+        kabKota: "Kota A",
+        assessmentDate: "2026-01-01",
+        achievedEndSurahNumber: 2,
+        achievedEndVerseNumber: 20,
+        dayNumber: 1,
+        targetEndSurahNumber: 2,
+        targetEndVerseNumber: 16,
+      },
+      {
+        studentId: "student-not-reached",
+        fullName: "Not Reached Student",
+        studentCode: "TQ-0002",
+        locationId: "location-a",
+        locationName: "Location A",
+        kabKota: "Kota A",
+        assessmentDate: "2026-01-01",
+        achievedEndSurahNumber: 1,
+        achievedEndVerseNumber: 5,
+        dayNumber: 1,
+        targetEndSurahNumber: 2,
+        targetEndVerseNumber: 16,
+      },
+      {
+        studentId: "student-no-target",
+        fullName: "No Target Student",
+        studentCode: "TQ-0003",
+        locationId: "location-a",
+        locationName: "Location A",
+        kabKota: "Kota A",
+        assessmentDate: "2026-01-01",
+        achievedEndSurahNumber: 5,
+        achievedEndVerseNumber: 5,
+        dayNumber: null,
+        targetEndSurahNumber: null,
+        targetEndVerseNumber: null,
+      },
+    ];
+  }
+  async getTodayActivityPhotos() {
+    return [
+      {
+        photoId: "photo-1",
+        objectKey: "https://example.com/photo-1.jpg",
+        caption: "Dokumentasi",
+        uploadedAt: "2026-01-01T10:00:00.000Z",
+        activityId: "activity-1",
+        activityTitle: "Kajian Pagi",
+        locationId: "location-a",
+        locationName: "Location A",
+        kabKota: "Kota A",
+      },
+    ];
+  }
 }
 
 class FakeStudentRepository {
@@ -35,12 +112,25 @@ class FakeStudentRepository {
   }
 }
 
+const fakeObjectStorage = {
+  createPresignedUpload: async () => ({
+    objectKey: "key",
+    uploadUrl: "https://example.com/upload",
+    expiresAt: "2026-01-01T00:00:00.000Z",
+  }),
+  createSignedDownloadUrl: async (objectKey: string) => `https://example.com/${objectKey}`,
+  headObject: async () => null,
+};
+
 function buildUseCase() {
   const dashboards = new FakeDashboardRepository();
   const students = new FakeStudentRepository();
-  const useCase = new DashboardUseCases(dashboards as never, students as never, {
-    nowIso: () => "2026-01-01T00:00:00.000Z",
-  });
+  const useCase = new DashboardUseCases(
+    dashboards as never,
+    students as never,
+    { nowIso: () => "2026-01-01T00:00:00.000Z" },
+    fakeObjectStorage as never,
+  );
   return { useCase, students };
 }
 
@@ -57,8 +147,10 @@ function makeStudent(id: string, locationId = "location-a"): Student {
   return {
     id,
     studentCode: "TQ-0001",
+    programStartDate: null,
     fullName: "Test Student",
     locationId,
+    angkatanId: null,
     nikEncrypted: null,
     guardianName: null,
     address: null,
@@ -127,5 +219,60 @@ describe("DashboardUseCases", () => {
     await expect(
       useCase.getStudentDashboard(operator, "s1", range, "Asia/Jakarta"),
     ).rejects.toMatchObject({ status: 403 });
+  });
+
+  it("returns a locations overview for an admin", async () => {
+    const { useCase } = buildUseCase();
+    const result = await useCase.getLocationsOverview(admin, "2026-01-01");
+    expect(result.date).toBe("2026-01-01");
+    expect(result.data).toEqual([
+      expect.objectContaining({ locationId: "location-a", assessmentsToday: 1 }),
+    ]);
+  });
+
+  it("rejects a locations overview for a non-admin", async () => {
+    const { useCase } = buildUseCase();
+    await expect(useCase.getLocationsOverview(operator, "2026-01-01")).rejects.toMatchObject({
+      status: 403,
+    });
+  });
+
+  it("computes target status for each student's memorization progress", async () => {
+    const { useCase } = buildUseCase();
+    const result = await useCase.getTodayMemorizationProgress(admin, "2026-01-01");
+    expect(result.date).toBe("2026-01-01");
+    expect(result.data).toEqual([
+      expect.objectContaining({ studentId: "student-reached", targetStatus: "REACHED" }),
+      expect.objectContaining({ studentId: "student-not-reached", targetStatus: "NOT_REACHED" }),
+      expect.objectContaining({ studentId: "student-no-target", targetStatus: "NO_TARGET_DATA" }),
+    ]);
+  });
+
+  it("rejects a memorization progress request for a non-admin", async () => {
+    const { useCase } = buildUseCase();
+    await expect(
+      useCase.getTodayMemorizationProgress(operator, "2026-01-01"),
+    ).rejects.toMatchObject({ status: 403 });
+  });
+
+  it("resolves signed photo URLs for today's activity photos", async () => {
+    const { useCase } = buildUseCase();
+    const result = await useCase.getTodayActivityPhotos(admin, "2026-01-01");
+    expect(result.date).toBe("2026-01-01");
+    expect(result.data).toEqual([
+      expect.objectContaining({
+        photoId: "photo-1",
+        photoUrl: "https://example.com/https://example.com/photo-1.jpg",
+        activityTitle: "Kajian Pagi",
+        locationName: "Location A",
+      }),
+    ]);
+  });
+
+  it("rejects a today activity photos request for a non-admin", async () => {
+    const { useCase } = buildUseCase();
+    await expect(useCase.getTodayActivityPhotos(operator, "2026-01-01")).rejects.toMatchObject({
+      status: 403,
+    });
   });
 });

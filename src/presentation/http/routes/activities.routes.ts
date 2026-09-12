@@ -71,6 +71,18 @@ export default async function activitiesRoutes(fastify: FastifyInstance): Promis
     return { data };
   });
 
+  fastify.get(
+    "/api/v1/activities/:id/photos",
+    { preHandler: fastify.authenticate },
+    async (request) => {
+      /* v8 ignore next */
+      if (!request.auth) throw AppError.unauthenticated();
+      const { id } = activityIdParams.parse(request.params);
+      const data = await fastify.container.activityUseCases.getPhotos(request.auth, id);
+      return { data, meta: { page: 1, pageSize: data.length, total: data.length } };
+    },
+  );
+
   fastify.patch("/api/v1/activities/:id", { preHandler: fastify.authenticate }, async (request) => {
     /* v8 ignore next */
     if (!request.auth) throw AppError.unauthenticated();
