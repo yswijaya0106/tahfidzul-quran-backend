@@ -148,11 +148,21 @@ export class DashboardUseCases {
     };
   }
 
-  /** Admin-only list of students who submitted new memorization today, with target status. */
-  async getTodayMemorizationProgress(auth: AuthContext, date: string) {
-    assertAdmin(auth);
+  /**
+   * List of students who submitted new memorization on `date`, with target
+   * status. With `locationId`, this is scoped to one rumah tahfidz and only
+   * requires [assertLocationScope] (a location operator may view their own
+   * location); without it, this is the admin-only, school-wide list.
+   */
+  async getTodayMemorizationProgress(auth: AuthContext, date: string, locationId?: string) {
+    if (locationId) {
+      assertLocationScope(auth, locationId);
+    } else {
+      assertAdmin(auth);
+    }
     const rows = await this.dashboards.getTodayMemorizationProgress(date);
-    const data: StudentMemorizationProgressItem[] = rows.map((row) => ({
+    const scoped = locationId ? rows.filter((row) => row.locationId === locationId) : rows;
+    const data: StudentMemorizationProgressItem[] = scoped.map((row) => ({
       ...row,
       targetStatus: computeTargetStatus(
         row.achievedEndSurahNumber,
@@ -289,13 +299,22 @@ export class DashboardUseCases {
     };
   }
 
-  /** Admin-only feed of today's activity photos across every location, most
-   * recently uploaded first. */
-  async getTodayActivityPhotos(auth: AuthContext, date: string) {
-    assertAdmin(auth);
+  /**
+   * Feed of activity photos uploaded on `date`, most recently uploaded
+   * first. With `locationId`, this is scoped to one rumah tahfidz and only
+   * requires [assertLocationScope]; without it, this is the admin-only,
+   * school-wide feed.
+   */
+  async getTodayActivityPhotos(auth: AuthContext, date: string, locationId?: string) {
+    if (locationId) {
+      assertLocationScope(auth, locationId);
+    } else {
+      assertAdmin(auth);
+    }
     const rows = await this.dashboards.getTodayActivityPhotos(date);
+    const scoped = locationId ? rows.filter((row) => row.locationId === locationId) : rows;
     const data: TodayActivityPhotoItem[] = await Promise.all(
-      rows.map(async ({ objectKey, ...row }) => ({
+      scoped.map(async ({ objectKey, ...row }) => ({
         ...row,
         photoUrl: await this.objectStorage.createSignedDownloadUrl(objectKey),
       })),

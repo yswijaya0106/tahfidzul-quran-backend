@@ -336,6 +336,20 @@ describe("DashboardUseCases", () => {
     ).rejects.toMatchObject({ status: 403 });
   });
 
+  it("lets a location operator view their own location's memorization progress", async () => {
+    const { useCase } = buildUseCase();
+    const result = await useCase.getTodayMemorizationProgress(operator, "2026-01-01", "location-a");
+    expect(result.data).toHaveLength(3);
+    expect(result.data.every((item) => item.locationId === "location-a")).toBe(true);
+  });
+
+  it("rejects a location-scoped memorization progress request for an operator assigned elsewhere", async () => {
+    const { useCase } = buildUseCase();
+    await expect(
+      useCase.getTodayMemorizationProgress(operator, "2026-01-01", "location-b"),
+    ).rejects.toMatchObject({ status: 403 });
+  });
+
   it("resolves signed photo URLs for today's activity photos", async () => {
     const { useCase } = buildUseCase();
     const result = await useCase.getTodayActivityPhotos(admin, "2026-01-01");
@@ -355,6 +369,20 @@ describe("DashboardUseCases", () => {
     await expect(useCase.getTodayActivityPhotos(operator, "2026-01-01")).rejects.toMatchObject({
       status: 403,
     });
+  });
+
+  it("lets a location operator view their own location's activity photos", async () => {
+    const { useCase } = buildUseCase();
+    const result = await useCase.getTodayActivityPhotos(operator, "2026-01-01", "location-a");
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]).toMatchObject({ locationId: "location-a" });
+  });
+
+  it("rejects a location-scoped activity photos request for an operator assigned elsewhere", async () => {
+    const { useCase } = buildUseCase();
+    await expect(
+      useCase.getTodayActivityPhotos(operator, "2026-01-01", "location-b"),
+    ).rejects.toMatchObject({ status: 403 });
   });
 
   it("ranks the daily leaderboard by verse delta, excluding students with no target data", async () => {

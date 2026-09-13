@@ -4,6 +4,10 @@ import { AppError } from "../../../domain/errors";
 
 const idParams = z.object({ id: z.string().uuid() });
 const overviewQuerySchema = z.object({ date: z.string().date().optional() });
+const dailyQuerySchema = z.object({
+  date: z.string().date().optional(),
+  locationId: z.string().uuid().optional(),
+});
 const leaderboardQuerySchema = z.object({
   scope: z.enum(["AGGREGATE", "DAILY"]).optional(),
   date: z.string().date().optional(),
@@ -41,10 +45,11 @@ export default async function dashboardRoutes(fastify: FastifyInstance): Promise
     async (request) => {
       /* v8 ignore next */
       if (!request.auth) throw AppError.unauthenticated();
-      const { date } = overviewQuerySchema.parse(request.query);
+      const { date, locationId } = dailyQuerySchema.parse(request.query);
       const data = await fastify.container.dashboardUseCases.getTodayMemorizationProgress(
         request.auth,
         date ?? new Date().toISOString().slice(0, 10),
+        locationId,
       );
       return { data };
     },
@@ -73,10 +78,11 @@ export default async function dashboardRoutes(fastify: FastifyInstance): Promise
     async (request) => {
       /* v8 ignore next */
       if (!request.auth) throw AppError.unauthenticated();
-      const { date } = overviewQuerySchema.parse(request.query);
+      const { date, locationId } = dailyQuerySchema.parse(request.query);
       const data = await fastify.container.dashboardUseCases.getTodayActivityPhotos(
         request.auth,
         date ?? new Date().toISOString().slice(0, 10),
+        locationId,
       );
       return { data };
     },

@@ -65,12 +65,18 @@ export async function createOperator(
     );
   }
 
-  const loginResponse = await ctx.app.inject({
-    method: "POST",
-    url: "/api/v1/auth/login",
-    payload: { identifier: email, password },
+  // Mint the access token directly via the token service rather than
+  // POSTing to /auth/login: that route is capped at 10 req/min (brute-force
+  // protection), and test files that create several operators to check
+  // location-scoped authorization quickly exceed it, making createOperator
+  // itself flaky. assignedLocationIds is looked up from the DB per-request
+  // by the `authenticate` plugin (not carried in the token), so a token
+  // minted this way is authorization-equivalent to a real login.
+  const token = ctx.container.tokenService.signAccessToken({
+    sub: id,
+    role: "LOCATION_OPERATOR",
   });
-  return { id, token: loginResponse.json().data.accessToken as string };
+  return { id, token };
 }
 
 export async function createLocationRow(pool: Pool, overrides: Record<string, unknown> = {}) {

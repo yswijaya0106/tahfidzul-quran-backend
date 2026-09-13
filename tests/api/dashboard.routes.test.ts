@@ -183,6 +183,31 @@ describe("dashboard routes", () => {
       });
       expect(res.statusCode).toBe(403);
     });
+
+    it("lets a location operator view their own location's activity photos", async () => {
+      await insertActivityWithPhotos("Kajian Sore", ["https://example.com/photo-b1.jpg"]);
+      const operator = await createOperator(ctx, [locationId]);
+      const res = await ctx.app.inject({
+        method: "GET",
+        url: `/api/v1/dashboard/today-activity-photos?locationId=${locationId}`,
+        headers: authHeader(operator.token),
+      });
+      expect(res.statusCode).toBe(200);
+      const rows = res.json().data.data as { locationId: string }[];
+      expect(rows.length).toBeGreaterThan(0);
+      expect(rows.every((r) => r.locationId === locationId)).toBe(true);
+    });
+
+    it("rejects a location-scoped activity photos request for an operator assigned elsewhere", async () => {
+      const otherLocationId = await createLocationRow(ctx.pool, { kabKota: "Kota Lain" });
+      const operator = await createOperator(ctx, [otherLocationId]);
+      const res = await ctx.app.inject({
+        method: "GET",
+        url: `/api/v1/dashboard/today-activity-photos?locationId=${locationId}`,
+        headers: authHeader(operator.token),
+      });
+      expect(res.statusCode).toBe(403);
+    });
   });
 
   describe("memorization progress", () => {
@@ -261,6 +286,37 @@ describe("dashboard routes", () => {
       const res = await ctx.app.inject({
         method: "GET",
         url: "/api/v1/dashboard/memorization-progress",
+        headers: authHeader(operator.token),
+      });
+      expect(res.statusCode).toBe(403);
+    });
+
+    it("lets a location operator view their own location's memorization progress", async () => {
+      const studentId = await createStudentRow(ctx.pool, locationId, "Scoped Student");
+      await ctx.pool.query("UPDATE students SET program_start_date = ? WHERE id = ?", [
+        today,
+        studentId,
+      ]);
+      await insertAssessment(studentId, 1, 5, 1);
+
+      const operator = await createOperator(ctx, [locationId]);
+      const res = await ctx.app.inject({
+        method: "GET",
+        url: `/api/v1/dashboard/memorization-progress?locationId=${locationId}`,
+        headers: authHeader(operator.token),
+      });
+      expect(res.statusCode).toBe(200);
+      const rows = res.json().data.data as { locationId: string }[];
+      expect(rows.length).toBeGreaterThan(0);
+      expect(rows.every((r) => r.locationId === locationId)).toBe(true);
+    });
+
+    it("rejects a location-scoped memorization progress request for an operator assigned elsewhere", async () => {
+      const otherLocationId = await createLocationRow(ctx.pool, { kabKota: "Kota Lain" });
+      const operator = await createOperator(ctx, [otherLocationId]);
+      const res = await ctx.app.inject({
+        method: "GET",
+        url: `/api/v1/dashboard/memorization-progress?locationId=${locationId}`,
         headers: authHeader(operator.token),
       });
       expect(res.statusCode).toBe(403);
