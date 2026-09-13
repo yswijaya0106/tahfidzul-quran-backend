@@ -27,6 +27,12 @@ interface LocationSeed {
   kabKota: string;
   kecamatan: string;
   kodePos: string;
+  /** ref_province.id / ref_city.id — null when no matching row exists in
+   * the (partial) reference dataset for this city. */
+  provinceId: number | null;
+  cityId: number | null;
+  latitude: number;
+  longitude: number;
   phone: string;
   description: string;
   organizationMembers: OrganizationMemberSeed[];
@@ -96,6 +102,10 @@ const LOCATIONS: LocationSeed[] = [
     kabKota: "Kota Bandung",
     kecamatan: "Sumur Bandung",
     kodePos: "40111",
+    provinceId: 2,
+    cityId: 45,
+    latitude: -6.9175,
+    longitude: 107.6191,
     phone: "0812000001",
     description: "Rumah tahfidz putra dengan fokus hafalan 30 juz dan pembinaan akhlak.",
     organizationMembers: organizationMembers(
@@ -161,6 +171,10 @@ const LOCATIONS: LocationSeed[] = [
     kabKota: "Kota Yogyakarta",
     kecamatan: "Gondokusuman",
     kodePos: "55223",
+    provinceId: 4,
+    cityId: 49,
+    latitude: -7.7956,
+    longitude: 110.3695,
     phone: "0812000002",
     description: "Rumah tahfidz putri dengan program tahsin dan tahfidz terpadu.",
     organizationMembers: organizationMembers(
@@ -220,6 +234,10 @@ const LOCATIONS: LocationSeed[] = [
     kabKota: "Kota Surabaya",
     kecamatan: "Wonokromo",
     kodePos: "60241",
+    provinceId: 1,
+    cityId: 275,
+    latitude: -7.2575,
+    longitude: 112.7521,
     phone: "0812000003",
     description: "Rumah tahfidz putra dengan kurikulum tahfidz dan bahasa Arab.",
     organizationMembers: organizationMembers(
@@ -280,6 +298,10 @@ const LOCATIONS: LocationSeed[] = [
     kabKota: "Kota Medan",
     kecamatan: "Medan Kota",
     kodePos: "20217",
+    provinceId: 8,
+    cityId: 91,
+    latitude: 3.5952,
+    longitude: 98.6722,
     phone: "0812000004",
     description: "Rumah tahfidz putra dengan pembinaan tahfidz dan kewirausahaan santri.",
     organizationMembers: organizationMembers(
@@ -339,6 +361,12 @@ const LOCATIONS: LocationSeed[] = [
     kabKota: "Kota Makassar",
     kecamatan: "Tamalate",
     kodePos: "90221",
+    // No matching ref_city row exists for Makassar in the (partial)
+    // reference dataset, so cityId stays null; the province does exist.
+    provinceId: 23,
+    cityId: null,
+    latitude: -5.1477,
+    longitude: 119.4327,
     phone: "0812000005",
     description: "Rumah tahfidz putri dengan pembinaan tahfidz dan keterampilan hidup.",
     organizationMembers: organizationMembers(
@@ -398,6 +426,10 @@ const LOCATIONS: LocationSeed[] = [
     kabKota: "Kota Palembang",
     kecamatan: "Ilir Timur I",
     kodePos: "30129",
+    provinceId: 28,
+    cityId: 146,
+    latitude: -2.9761,
+    longitude: 104.7754,
     phone: "0812000006",
     description: "Rumah tahfidz putra dengan kurikulum tahfidz dan tahsin intensif.",
     organizationMembers: organizationMembers(
@@ -452,6 +484,10 @@ const LOCATIONS: LocationSeed[] = [
     kabKota: "Kota Semarang",
     kecamatan: "Semarang Tengah",
     kodePos: "50241",
+    provinceId: 3,
+    cityId: 219,
+    latitude: -6.9932,
+    longitude: 110.4203,
     phone: "0812000007",
     description: "Rumah tahfidz putri dengan program tahfidz dan bimbingan adab.",
     organizationMembers: organizationMembers(
@@ -530,7 +566,8 @@ async function seedDummyData(): Promise<void> {
         // address fields (this script isn't meant to duplicate students/
         // operators/activities for a location that already has them).
         await pool.query(
-          `UPDATE locations SET address = ?, provinsi = ?, kab_kota = ?, kecamatan = ?, kode_pos = ?
+          `UPDATE locations SET address = ?, provinsi = ?, kab_kota = ?, kecamatan = ?, kode_pos = ?,
+             province_id = ?, city_id = ?, latitude = ?, longitude = ?
            WHERE id = ?`,
           [
             location.address,
@@ -538,6 +575,10 @@ async function seedDummyData(): Promise<void> {
             location.kabKota,
             location.kecamatan,
             location.kodePos,
+            location.provinceId,
+            location.cityId,
+            location.latitude,
+            location.longitude,
             existingRows[0].id,
           ],
         );
@@ -548,8 +589,9 @@ async function seedDummyData(): Promise<void> {
       const locationId = uuid();
       await pool.query(
         `INSERT INTO locations
-          (id, name, address, provinsi, kab_kota, kecamatan, kode_pos, phone, description, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?, ?)`,
+          (id, name, address, provinsi, kab_kota, kecamatan, kode_pos, province_id, city_id,
+           latitude, longitude, phone, description, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?, ?)`,
         [
           locationId,
           location.name,
@@ -558,6 +600,10 @@ async function seedDummyData(): Promise<void> {
           location.kabKota,
           location.kecamatan,
           location.kodePos,
+          location.provinceId,
+          location.cityId,
+          location.latitude,
+          location.longitude,
           location.phone,
           location.description,
           now,
