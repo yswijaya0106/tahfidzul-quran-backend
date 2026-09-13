@@ -7,6 +7,7 @@ const overviewQuerySchema = z.object({ date: z.string().date().optional() });
 const leaderboardQuerySchema = z.object({
   scope: z.enum(["AGGREGATE", "DAILY"]).optional(),
   date: z.string().date().optional(),
+  locationId: z.string().uuid().optional(),
 });
 
 function defaultRange(query: Record<string, string>) {
@@ -55,11 +56,12 @@ export default async function dashboardRoutes(fastify: FastifyInstance): Promise
     async (request) => {
       /* v8 ignore next */
       if (!request.auth) throw AppError.unauthenticated();
-      const { scope, date } = leaderboardQuerySchema.parse(request.query);
+      const { scope, date, locationId } = leaderboardQuerySchema.parse(request.query);
       const data = await fastify.container.dashboardUseCases.getMemorizationLeaderboard(
         request.auth,
         scope ?? "AGGREGATE",
         date ?? new Date().toISOString().slice(0, 10),
+        locationId,
       );
       return { data };
     },

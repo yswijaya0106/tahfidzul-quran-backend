@@ -397,4 +397,37 @@ describe("DashboardUseCases", () => {
       status: 403,
     });
   });
+
+  it("lets a location operator view their own location's leaderboard", async () => {
+    const { useCase } = buildUseCase();
+    const result = await useCase.getMemorizationLeaderboard(
+      operator,
+      "AGGREGATE",
+      "2026-01-01",
+      "location-a",
+    );
+    expect(result.data.map((item) => item.studentId)).toEqual(["student-ahead", "student-behind"]);
+    expect(result.data.every((item) => item.locationId === "location-a")).toBe(true);
+  });
+
+  it("rejects a location-scoped leaderboard for an operator not assigned to that location", async () => {
+    const { useCase } = buildUseCase();
+    await expect(
+      useCase.getMemorizationLeaderboard(operator, "AGGREGATE", "2026-01-01", "location-b"),
+    ).rejects.toMatchObject({ status: 403 });
+  });
+
+  it("lets an admin view any location's leaderboard", async () => {
+    const { useCase } = buildUseCase();
+    const result = await useCase.getMemorizationLeaderboard(
+      admin,
+      "DAILY",
+      "2026-01-01",
+      "location-a",
+    );
+    expect(result.data.map((item) => item.studentId)).toEqual([
+      "student-reached",
+      "student-not-reached",
+    ]);
+  });
 });

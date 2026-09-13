@@ -377,5 +377,28 @@ describe("dashboard routes", () => {
       });
       expect(res.statusCode).toBe(403);
     });
+
+    it("lets a location operator view their own location's leaderboard", async () => {
+      const operator = await createOperator(ctx, [locationId]);
+      const res = await ctx.app.inject({
+        method: "GET",
+        url: `/api/v1/dashboard/leaderboard?locationId=${locationId}`,
+        headers: authHeader(operator.token),
+      });
+      expect(res.statusCode).toBe(200);
+      const rows = res.json().data.data as { locationId: string }[];
+      expect(rows.every((r) => r.locationId === locationId)).toBe(true);
+    });
+
+    it("rejects a location-scoped leaderboard for an operator assigned elsewhere", async () => {
+      const otherLocationId = await createLocationRow(ctx.pool, { kabKota: "Kota Lain" });
+      const operator = await createOperator(ctx, [otherLocationId]);
+      const res = await ctx.app.inject({
+        method: "GET",
+        url: `/api/v1/dashboard/leaderboard?locationId=${locationId}`,
+        headers: authHeader(operator.token),
+      });
+      expect(res.statusCode).toBe(403);
+    });
   });
 });

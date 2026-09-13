@@ -169,16 +169,30 @@ export class DashboardUseCases {
   }
 
   /**
-   * Admin-only school-wide leaderboard ranking active students by how far
-   * their achieved position exceeds (or trails) their daily target, in
-   * linear verse count. `scope: "DAILY"` only considers students who
-   * submitted a new-memorization assessment on `date`; `scope: "AGGREGATE"`
-   * considers every active student's furthest-ever position against the
-   * target for their *current* program day (today, relative to their
-   * program_start_date), regardless of when that position was recorded.
+   * Leaderboard ranking students by how far their achieved position exceeds
+   * (or trails) their daily target, in linear verse count. `scope: "DAILY"`
+   * only considers students who submitted a new-memorization assessment on
+   * `date`; `scope: "AGGREGATE"` considers every active student's
+   * furthest-ever position against the target for their *current* program
+   * day (today, relative to their program_start_date), regardless of when
+   * that position was recorded.
+   *
+   * With `locationId`, this is a single rumah tahfidz's leaderboard (rank
+   * 1 is relative to that location's own students) and requires only
+   * [assertLocationScope] — a location operator may view their own
+   * location. Without it, this is the admin-only, school-wide leaderboard.
    */
-  async getMemorizationLeaderboard(auth: AuthContext, scope: LeaderboardScope, date: string) {
-    assertAdmin(auth);
+  async getMemorizationLeaderboard(
+    auth: AuthContext,
+    scope: LeaderboardScope,
+    date: string,
+    locationId?: string,
+  ) {
+    if (locationId) {
+      assertLocationScope(auth, locationId);
+    } else {
+      assertAdmin(auth);
+    }
 
     const targets = await this.dailyTargets.list();
     const targetsByDay = new Map(targets.map((target) => [target.dayNumber, target]));
@@ -216,6 +230,10 @@ export class DashboardUseCases {
           achievedEndVerseNumber: row.achievedEndVerseNumber!,
           dayNumber: computeDayNumber(date, row.programStartDate),
         }));
+    }
+
+    if (locationId) {
+      candidates = candidates.filter((row) => row.locationId === locationId);
     }
 
     const items: LeaderboardItem[] = [];
