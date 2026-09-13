@@ -146,6 +146,25 @@ describe("MysqlDashboardRepository", () => {
     expect(row!.activitiesToday).toBe(0);
     expect(row!.photosToday).toBe(0);
   });
+
+  it("returns each active student's furthest new-memorization position for the aggregate leaderboard", async () => {
+    await pool.query("UPDATE students SET program_start_date = ? WHERE id = ?", [
+      new Date().toISOString().slice(0, 10),
+      studentId,
+    ]);
+
+    const rows = await repo.getAggregateMemorizationProgress();
+    const row = rows.find((r) => r.studentId === studentId);
+
+    expect(row).toBeDefined();
+    expect(row!.achievedEndSurahNumber).toBe(1);
+    expect(row!.achievedEndVerseNumber).toBe(5);
+    expect(row!.programStartDate).not.toBeNull();
+
+    // No program_start_date was set for inactiveStudentId, so the aggregate
+    // query (which requires it) excludes that student entirely.
+    expect(rows.some((r) => r.studentId === inactiveStudentId)).toBe(false);
+  });
 });
 
 async function createLocation(pool: Pool): Promise<string> {

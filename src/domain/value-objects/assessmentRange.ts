@@ -18,6 +18,26 @@ export interface SurahLookup {
 }
 
 /**
+ * Converts a Quran position into a single linear verse count from the very
+ * start of the Mushaf (surah 1, verse 1 => 1), by summing every preceding
+ * surah's verse count plus the verse number within the target surah. This
+ * gives a scalar "how far into the Quran" measure so two positions (e.g. a
+ * student's achieved position and their daily target) can be compared by
+ * magnitude, not just ordinally. Returns null if any surah in the 1..surahNumber
+ * range is missing from the lookup (should not happen with a fully-seeded
+ * quran_surahs table).
+ */
+export function cumulativeVerseIndex(surahs: SurahLookup, position: QuranPosition): number | null {
+  let total = position.verseNumber;
+  for (let surahNumber = 1; surahNumber < position.surahNumber; surahNumber++) {
+    const surah = surahs.getBySurahNumber(surahNumber);
+    if (!surah) return null;
+    total += surah.verseCount;
+  }
+  return total;
+}
+
+/**
  * Validates a start/end assessment range against the canonical Quran reference dataset.
  * Throws AppError.unprocessable with field-level messages when invalid.
  */

@@ -64,6 +64,25 @@ export interface StudentMemorizationProgressRow {
   targetEndVerseNumber: number | null;
 }
 
+/** Raw per-student facts for the school-wide aggregate leaderboard: each
+ * active student's furthest-ever new-memorization position, regardless of
+ * when it was recorded (as opposed to [StudentMemorizationProgressRow],
+ * which is scoped to a single day). */
+export interface StudentAggregateProgressRow {
+  studentId: string;
+  fullName: string;
+  studentCode: string;
+  locationId: string;
+  locationName: string;
+  kabKota: string | null;
+  programStartDate: string | null;
+  /** Date of the student's latest NEW_MEMORIZATION assessment, or null if
+   * they have never submitted one. */
+  latestAssessmentDate: string | null;
+  achievedEndSurahNumber: number | null;
+  achievedEndVerseNumber: number | null;
+}
+
 export interface StudentDashboardData {
   latestNewMemorization: unknown | null;
   latestMurojaah: unknown | null;
@@ -98,6 +117,9 @@ export interface DashboardRepository {
   getLocationsOverview(date: string): Promise<LocationOverviewItem[]>;
   /** Active students who submitted a new-memorization assessment on the given day. */
   getTodayMemorizationProgress(date: string): Promise<StudentMemorizationProgressRow[]>;
+  /** Every active student's furthest-ever new-memorization position, for the
+   * school-wide aggregate ("since program start") leaderboard. */
+  getAggregateMemorizationProgress(): Promise<StudentAggregateProgressRow[]>;
   /** All activity photos uploaded on the given day across every non-deleted
    * location, most recently uploaded first. */
   getTodayActivityPhotos(date: string): Promise<TodayActivityPhotoRow[]>;

@@ -74,6 +74,30 @@ describe("students routes", () => {
     expect(afterArchive.statusCode).toBe(404);
   });
 
+  it("sets and updates a student's photo, returning a signed download URL", async () => {
+    const createRes = await ctx.app.inject({
+      method: "POST",
+      url: "/api/v1/students",
+      headers: authHeader(ctx.adminToken),
+      payload: {
+        fullName: "Photo Test Student",
+        locationId,
+        studentPhotoObjectKey: "students/photo-a.jpg",
+      },
+    });
+    expect(createRes.statusCode).toBe(201);
+    const student = createRes.json().data;
+    expect(student.studentPhotoUrl).toContain("students/photo-a.jpg");
+
+    const patchRes = await ctx.app.inject({
+      method: "PATCH",
+      url: `/api/v1/students/${student.id}`,
+      headers: authHeader(ctx.adminToken),
+      payload: { studentPhotoObjectKey: "students/photo-b.jpg" },
+    });
+    expect(patchRes.json().data.studentPhotoUrl).toContain("students/photo-b.jpg");
+  });
+
   it("rejects create for a non-admin operator", async () => {
     const operator = await createOperator(ctx, [locationId]);
     const res = await ctx.app.inject({

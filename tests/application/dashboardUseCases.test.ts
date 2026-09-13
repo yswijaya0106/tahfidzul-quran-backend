@@ -87,6 +87,85 @@ class FakeDashboardRepository {
       },
     ];
   }
+  async getAggregateMemorizationProgress() {
+    return [
+      {
+        studentId: "student-ahead",
+        fullName: "Ahead Student",
+        studentCode: "TQ-0004",
+        locationId: "location-a",
+        locationName: "Location A",
+        kabKota: "Kota A",
+        programStartDate: "2026-01-01",
+        latestAssessmentDate: "2026-01-01",
+        achievedEndSurahNumber: 2,
+        achievedEndVerseNumber: 20,
+      },
+      {
+        studentId: "student-behind",
+        fullName: "Behind Student",
+        studentCode: "TQ-0005",
+        locationId: "location-a",
+        locationName: "Location A",
+        kabKota: "Kota A",
+        programStartDate: "2026-01-01",
+        latestAssessmentDate: "2026-01-01",
+        achievedEndSurahNumber: 1,
+        achievedEndVerseNumber: 5,
+      },
+      {
+        studentId: "student-no-assessment",
+        fullName: "No Assessment Student",
+        studentCode: "TQ-0006",
+        locationId: "location-a",
+        locationName: "Location A",
+        kabKota: "Kota A",
+        programStartDate: "2026-01-01",
+        latestAssessmentDate: null,
+        achievedEndSurahNumber: null,
+        achievedEndVerseNumber: null,
+      },
+    ];
+  }
+}
+
+class FakeDailyTargetRepository {
+  async list() {
+    return [
+      {
+        dayNumber: 1,
+        startSurahNumber: 1,
+        startVerseNumber: 1,
+        endSurahNumber: 2,
+        endVerseNumber: 16,
+      },
+    ];
+  }
+  async findByDayNumber() {
+    return null;
+  }
+  async create() {}
+  async update() {}
+  async delete() {}
+  async hasAssessments() {
+    return false;
+  }
+}
+
+class FakeQuranRepository {
+  private readonly surahs = new Map([
+    [1, { surahNumber: 1, arabicName: "الفاتحة", latinName: "Al-Fatihah", verseCount: 7 }],
+    [2, { surahNumber: 2, arabicName: "البقرة", latinName: "Al-Baqarah", verseCount: 286 }],
+  ]);
+  getBySurahNumber(n: number) {
+    return this.surahs.get(n);
+  }
+  async getBySurahNumberAsync(n: number) {
+    return this.surahs.get(n);
+  }
+  async list() {
+    return Array.from(this.surahs.values());
+  }
 }
 
 class FakeStudentRepository {
@@ -130,6 +209,8 @@ function buildUseCase() {
     students as never,
     { nowIso: () => "2026-01-01T00:00:00.000Z" },
     fakeObjectStorage as never,
+    new FakeDailyTargetRepository() as never,
+    new FakeQuranRepository() as never,
   );
   return { useCase, students };
 }
@@ -272,6 +353,47 @@ describe("DashboardUseCases", () => {
   it("rejects a today activity photos request for a non-admin", async () => {
     const { useCase } = buildUseCase();
     await expect(useCase.getTodayActivityPhotos(operator, "2026-01-01")).rejects.toMatchObject({
+      status: 403,
+    });
+  });
+
+  it("ranks the daily leaderboard by verse delta, excluding students with no target data", async () => {
+    const { useCase } = buildUseCase();
+    const result = await useCase.getMemorizationLeaderboard(admin, "DAILY", "2026-01-01");
+    expect(result.scope).toBe("DAILY");
+    // student-no-target has dayNumber: null in getTodayMemorizationProgress and is excluded.
+    expect(result.data.map((item) => item.studentId)).toEqual([
+      "student-reached",
+      "student-not-reached",
+    ]);
+    expect(result.data[0]).toMatchObject({
+      rank: 1,
+      studentId: "student-reached",
+      targetStatus: "REACHED",
+    });
+    expect(result.data[0]!.deltaVerses).toBeGreaterThan(0);
+    expect(result.data[1]).toMatchObject({
+      rank: 2,
+      studentId: "student-not-reached",
+      targetStatus: "NOT_REACHED",
+    });
+    expect(result.data[1]!.deltaVerses).toBeLessThan(0);
+  });
+
+  it("ranks the aggregate leaderboard using each student's furthest position vs their current-day target", async () => {
+    const { useCase } = buildUseCase();
+    const result = await useCase.getMemorizationLeaderboard(admin, "AGGREGATE", "2026-01-01");
+    expect(result.scope).toBe("AGGREGATE");
+    // student-no-assessment has no achieved position and is excluded.
+    expect(result.data.map((item) => item.studentId)).toEqual(["student-ahead", "student-behind"]);
+    expect(result.data[0]!.deltaVerses).toBeGreaterThan(result.data[1]!.deltaVerses);
+  });
+
+  it("defaults to AGGREGATE scope and rejects the leaderboard for a non-admin", async () => {
+    const { useCase } = buildUseCase();
+    await expect(
+      useCase.getMemorizationLeaderboard(operator, "AGGREGATE", "2026-01-01"),
+    ).rejects.toMatchObject({
       status: 403,
     });
   });

@@ -4,6 +4,7 @@ import {
   DateRange,
   LocationDashboardData,
   LocationOverviewItem,
+  StudentAggregateProgressRow,
   StudentDashboardData,
   StudentMemorizationProgressRow,
   TodayActivityPhotoRow,
@@ -301,6 +302,66 @@ export class MysqlDashboardRepository implements DashboardRepository {
         row.target_end_surah_number === null ? null : Number(row.target_end_surah_number),
       targetEndVerseNumber:
         row.target_end_verse_number === null ? null : Number(row.target_end_verse_number),
+    }));
+  }
+
+  async getAggregateMemorizationProgress(): Promise<StudentAggregateProgressRow[]> {
+    const [rows] = await this.pool.query<RowDataPacket[]>(
+      `SELECT
+         s.id AS student_id,
+         s.full_name,
+         s.student_code,
+         s.location_id,
+         l.name AS location_name,
+         l.kab_kota AS kab_kota,
+         s.program_start_date,
+         a.assessment_date AS latest_assessment_date,
+         a.end_surah_number AS achieved_end_surah_number,
+         a.end_verse_number AS achieved_end_verse_number
+       FROM students s
+       JOIN locations l ON l.id = s.location_id
+       LEFT JOIN memorization_assessments a ON a.id = (
+         SELECT a2.id FROM memorization_assessments a2
+         WHERE a2.student_id = s.id
+           AND a2.assessment_type = 'NEW_MEMORIZATION'
+           AND a2.deleted_at IS NULL
+         ORDER BY a2.assessment_date DESC, a2.created_at DESC
+         LIMIT 1
+       )
+       WHERE s.status = 'ACTIVE' AND s.deleted_at IS NULL AND s.program_start_date IS NOT NULL
+       ORDER BY l.name ASC, s.full_name ASC`,
+    );
+
+    return (
+      rows as {
+        student_id: string;
+        full_name: string;
+        student_code: string;
+        location_id: string;
+        location_name: string;
+        kab_kota: string | null;
+        program_start_date: Date | null;
+        latest_assessment_date: Date | null;
+        achieved_end_surah_number: number | null;
+        achieved_end_verse_number: number | null;
+      }[]
+    ).map((row) => ({
+      studentId: row.student_id,
+      fullName: row.full_name,
+      studentCode: row.student_code,
+      locationId: row.location_id,
+      locationName: row.location_name,
+      kabKota: row.kab_kota,
+      programStartDate: row.program_start_date
+        ? row.program_start_date.toISOString().slice(0, 10)
+        : null,
+      latestAssessmentDate: row.latest_assessment_date
+        ? row.latest_assessment_date.toISOString().slice(0, 10)
+        : null,
+      achievedEndSurahNumber:
+        row.achieved_end_surah_number === null ? null : Number(row.achieved_end_surah_number),
+      achievedEndVerseNumber:
+        row.achieved_end_verse_number === null ? null : Number(row.achieved_end_verse_number),
     }));
   }
 

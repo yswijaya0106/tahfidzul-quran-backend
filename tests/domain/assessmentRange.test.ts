@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   comparePositions,
+  cumulativeVerseIndex,
   validateAssessmentDate,
   validateAssessmentRange,
 } from "../../src/domain/value-objects/assessmentRange";
@@ -98,6 +99,38 @@ describe("validateAssessmentRange", () => {
         lookup,
       ),
     ).not.toThrow();
+  });
+});
+
+describe("cumulativeVerseIndex", () => {
+  const fullLookup = {
+    getBySurahNumber: (n: number) =>
+      new Map<number, QuranSurah>([
+        [1, { surahNumber: 1, arabicName: "الفاتحة", latinName: "Al-Fatihah", verseCount: 7 }],
+        [2, { surahNumber: 2, arabicName: "البقرة", latinName: "Al-Baqarah", verseCount: 286 }],
+        [3, { surahNumber: 3, arabicName: "آل عمران", latinName: "Ali 'Imran", verseCount: 200 }],
+      ]).get(n),
+  };
+
+  it("returns the verse number itself for surah 1", () => {
+    expect(cumulativeVerseIndex(fullLookup, { surahNumber: 1, verseNumber: 5 })).toBe(5);
+  });
+
+  it("adds every preceding surah's verse count", () => {
+    expect(cumulativeVerseIndex(fullLookup, { surahNumber: 2, verseNumber: 1 })).toBe(7 + 1);
+    expect(cumulativeVerseIndex(fullLookup, { surahNumber: 3, verseNumber: 10 })).toBe(
+      7 + 286 + 10,
+    );
+  });
+
+  it("orders positions consistently with comparePositions", () => {
+    const a = cumulativeVerseIndex(fullLookup, { surahNumber: 1, verseNumber: 7 })!;
+    const b = cumulativeVerseIndex(fullLookup, { surahNumber: 2, verseNumber: 1 })!;
+    expect(a).toBeLessThan(b);
+  });
+
+  it("returns null when a preceding surah is missing from the lookup", () => {
+    expect(cumulativeVerseIndex(lookup, { surahNumber: 114, verseNumber: 1 })).toBeNull();
   });
 });
 

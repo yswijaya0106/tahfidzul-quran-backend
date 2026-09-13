@@ -4,6 +4,10 @@ import { AppError } from "../../../domain/errors";
 
 const idParams = z.object({ id: z.string().uuid() });
 const overviewQuerySchema = z.object({ date: z.string().date().optional() });
+const leaderboardQuerySchema = z.object({
+  scope: z.enum(["AGGREGATE", "DAILY"]).optional(),
+  date: z.string().date().optional(),
+});
 
 function defaultRange(query: Record<string, string>) {
   const to = query.to ?? new Date().toISOString().slice(0, 10);
@@ -39,6 +43,22 @@ export default async function dashboardRoutes(fastify: FastifyInstance): Promise
       const { date } = overviewQuerySchema.parse(request.query);
       const data = await fastify.container.dashboardUseCases.getTodayMemorizationProgress(
         request.auth,
+        date ?? new Date().toISOString().slice(0, 10),
+      );
+      return { data };
+    },
+  );
+
+  fastify.get(
+    "/api/v1/dashboard/leaderboard",
+    { preHandler: fastify.authenticate },
+    async (request) => {
+      /* v8 ignore next */
+      if (!request.auth) throw AppError.unauthenticated();
+      const { scope, date } = leaderboardQuerySchema.parse(request.query);
+      const data = await fastify.container.dashboardUseCases.getMemorizationLeaderboard(
+        request.auth,
+        scope ?? "AGGREGATE",
         date ?? new Date().toISOString().slice(0, 10),
       );
       return { data };

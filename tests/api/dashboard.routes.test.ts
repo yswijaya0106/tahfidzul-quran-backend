@@ -200,7 +200,16 @@ describe("dashboard routes", () => {
            start_surah_number, start_verse_number, end_surah_number, end_verse_number,
            grade, assessor_user_id)
          VALUES (?, ?, ?, ?, ?, 'NEW_MEMORIZATION', 1, 1, ?, ?, 'MUMTAZ', ?)`,
-        [uuid(), studentId, locationId, today, dayNumber, endSurahNumber, endVerseNumber, ctx.adminId],
+        [
+          uuid(),
+          studentId,
+          locationId,
+          today,
+          dayNumber,
+          endSurahNumber,
+          endVerseNumber,
+          ctx.adminId,
+        ],
       );
     }
 
@@ -252,6 +261,118 @@ describe("dashboard routes", () => {
       const res = await ctx.app.inject({
         method: "GET",
         url: "/api/v1/dashboard/memorization-progress",
+        headers: authHeader(operator.token),
+      });
+      expect(res.statusCode).toBe(403);
+    });
+  });
+
+  describe("leaderboard", () => {
+    const today = new Date().toISOString().slice(0, 10);
+
+    async function insertNewMemorization(
+      studentId: string,
+      endSurahNumber: number,
+      endVerseNumber: number,
+      dayNumber: number | null,
+      assessmentDate: string = today,
+    ) {
+      await ctx.pool.query(
+        `INSERT INTO memorization_assessments
+          (id, student_id, location_id, assessment_date, day_number, assessment_type,
+           start_surah_number, start_verse_number, end_surah_number, end_verse_number,
+           grade, assessor_user_id)
+         VALUES (?, ?, ?, ?, ?, 'NEW_MEMORIZATION', 1, 1, ?, ?, 'MUMTAZ', ?)`,
+        [
+          uuid(),
+          studentId,
+          locationId,
+          assessmentDate,
+          dayNumber,
+          endSurahNumber,
+          endVerseNumber,
+          ctx.adminId,
+        ],
+      );
+    }
+
+    it("ranks students by how far ahead of the daily target they are (DAILY scope)", async () => {
+      const aheadId = await createStudentRow(ctx.pool, locationId, "Leaderboard Ahead");
+      await ctx.pool.query("UPDATE students SET program_start_date = ? WHERE id = ?", [
+        today,
+        aheadId,
+      ]);
+      await insertNewMemorization(aheadId, 2, 20, 1);
+
+      const behindId = await createStudentRow(ctx.pool, locationId, "Leaderboard Behind");
+      await ctx.pool.query("UPDATE students SET program_start_date = ? WHERE id = ?", [
+        today,
+        behindId,
+      ]);
+      await insertNewMemorization(behindId, 1, 5, 1);
+
+      const res = await ctx.app.inject({
+        method: "GET",
+        url: "/api/v1/dashboard/leaderboard?scope=DAILY",
+        headers: authHeader(ctx.adminToken),
+      });
+      expect(res.statusCode).toBe(200);
+      const rows = res.json().data.data as {
+        studentId: string;
+        rank: number;
+        deltaVerses: number;
+      }[];
+      const aheadRow = rows.find((r) => r.studentId === aheadId);
+      const behindRow = rows.find((r) => r.studentId === behindId);
+      expect(aheadRow).toBeDefined();
+      expect(behindRow).toBeDefined();
+      expect(aheadRow!.rank).toBeLessThan(behindRow!.rank);
+      expect(aheadRow!.deltaVerses).toBeGreaterThan(behindRow!.deltaVerses);
+    });
+
+    it("ranks the aggregate leaderboard using each student's furthest-ever position", async () => {
+      const studentIdAgg = await createStudentRow(ctx.pool, locationId, "Leaderboard Aggregate");
+      await ctx.pool.query("UPDATE students SET program_start_date = ? WHERE id = ?", [
+        today,
+        studentIdAgg,
+      ]);
+      // An older, lower assessment followed by a newer, further one — the
+      // aggregate leaderboard should use the latest (furthest) position.
+      await insertNewMemorization(studentIdAgg, 1, 3, 1, "2000-01-01");
+      await insertNewMemorization(studentIdAgg, 2, 20, 1, today);
+
+      const res = await ctx.app.inject({
+        method: "GET",
+        url: "/api/v1/dashboard/leaderboard?scope=AGGREGATE",
+        headers: authHeader(ctx.adminToken),
+      });
+      expect(res.statusCode).toBe(200);
+      const rows = res.json().data.data as {
+        studentId: string;
+        achievedEndSurahNumber: number;
+        achievedEndVerseNumber: number;
+      }[];
+      const row = rows.find((r) => r.studentId === studentIdAgg);
+      expect(row).toBeDefined();
+      expect(row!.achievedEndSurahNumber).toBe(2);
+      expect(row!.achievedEndVerseNumber).toBe(20);
+    });
+
+    it("defaults to AGGREGATE scope when none is given", async () => {
+      const res = await ctx.app.inject({
+        method: "GET",
+        url: "/api/v1/dashboard/leaderboard",
+        headers: authHeader(ctx.adminToken),
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().data.scope).toBe("AGGREGATE");
+    });
+
+    it("rejects the leaderboard endpoint for a non-admin", async () => {
+      const operator = await createOperator(ctx, [locationId]);
+      const res = await ctx.app.inject({
+        method: "GET",
+        url: "/api/v1/dashboard/leaderboard",
         headers: authHeader(operator.token),
       });
       expect(res.statusCode).toBe(403);

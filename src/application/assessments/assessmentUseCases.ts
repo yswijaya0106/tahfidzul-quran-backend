@@ -13,8 +13,13 @@ import {
   MemorizationAssessment,
   MemorizationAssessmentWithTarget,
 } from "../../domain/entities/assessment";
-import { computeDayNumber, computeTargetStatus, TargetStatus } from "../../domain/entities/dailyTarget";
 import {
+  computeDayNumber,
+  computeTargetStatus,
+  TargetStatus,
+} from "../../domain/entities/dailyTarget";
+import {
+  cumulativeVerseIndex,
   validateAssessmentDate,
   validateAssessmentRange,
 } from "../../domain/value-objects/assessmentRange";
@@ -44,9 +49,35 @@ export interface UpdateAssessmentInput {
   notes?: string | null;
 }
 
-export type PublicAssessment = MemorizationAssessmentWithTarget & { targetStatus: TargetStatus };
+export type PublicAssessment = MemorizationAssessmentWithTarget & {
+  targetStatus: TargetStatus;
+  /** Linear verse count (from surah 1 verse 1) of this assessment's end
+   * position — a scalar "how far into the Quran" measure used to chart
+   * achievement over time and to rank students by magnitude, not just
+   * reached/not-reached. */
+  achievedCumulativeVerses: number;
+  /** Same linear measure for the daily target's end position, or null when
+   * there's no target data (see targetStatus). */
+  targetCumulativeVerses: number | null;
+};
 
-function toPublicAssessment(assessment: MemorizationAssessmentWithTarget): PublicAssessment {
+function toPublicAssessment(
+  assessment: MemorizationAssessmentWithTarget,
+  quran: QuranRepository,
+): PublicAssessment {
+  const achievedCumulativeVerses =
+    cumulativeVerseIndex(quran, {
+      surahNumber: assessment.endSurahNumber,
+      verseNumber: assessment.endVerseNumber,
+    }) ?? 0;
+  const targetCumulativeVerses =
+    assessment.targetEndSurahNumber !== null && assessment.targetEndVerseNumber !== null
+      ? cumulativeVerseIndex(quran, {
+          surahNumber: assessment.targetEndSurahNumber,
+          verseNumber: assessment.targetEndVerseNumber,
+        })
+      : null;
+
   return {
     ...assessment,
     targetStatus: computeTargetStatus(
@@ -55,6 +86,8 @@ function toPublicAssessment(assessment: MemorizationAssessmentWithTarget): Publi
       assessment.targetEndSurahNumber,
       assessment.targetEndVerseNumber,
     ),
+    achievedCumulativeVerses,
+    targetCumulativeVerses,
   };
 }
 
@@ -90,7 +123,7 @@ export class AssessmentUseCases {
   ): Promise<ListResult<PublicAssessment>> {
     await this.loadScopedStudent(auth, studentId);
     const result = await this.assessments.list({ ...filters, studentId }, page);
-    return { data: result.data.map(toPublicAssessment), meta: result.meta };
+    return { data: result.data.map((a) => toPublicAssessment(a, this.quran)), meta: result.meta };
   }
 
   async listForLocation(
@@ -101,11 +134,11 @@ export class AssessmentUseCases {
   ): Promise<ListResult<PublicAssessment>> {
     assertLocationScope(auth, locationId);
     const result = await this.assessments.list({ ...filters, locationId }, page);
-    return { data: result.data.map(toPublicAssessment), meta: result.meta };
+    return { data: result.data.map((a) => toPublicAssessment(a, this.quran)), meta: result.meta };
   }
 
   async getById(auth: AuthContext, id: string): Promise<PublicAssessment> {
-    return toPublicAssessment(await this.loadScopedAssessment(auth, id));
+    return toPublicAssessment(await this.loadScopedAssessment(auth, id), this.quran);
   }
 
   async create(
@@ -162,7 +195,7 @@ export class AssessmentUseCases {
       createdAt: now,
     });
 
-    return toPublicAssessment((await this.assessments.findById(assessment.id))!);
+    return toPublicAssessment((await this.assessments.findById(assessment.id))!, this.quran);
   }
 
   async update(
@@ -216,7 +249,7 @@ export class AssessmentUseCases {
       createdAt: now,
     });
 
-    return toPublicAssessment((await this.assessments.findById(id))!);
+    return toPublicAssessment((await this.assessments.findById(id))!, this.quran);
   }
 
   async archive(auth: AuthContext, id: string): Promise<void> {

@@ -13,6 +13,7 @@ const createStudentSchema = z.object({
   address: z.string().nullish(),
   studentPhone: z.string().nullish(),
   guardianPhone: z.string().nullish(),
+  studentPhotoObjectKey: z.string().min(1).nullish(),
 });
 
 const updateStudentSchema = createStudentSchema.omit({ locationId: true }).partial();

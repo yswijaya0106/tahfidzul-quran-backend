@@ -74,6 +74,12 @@ class FakeEncryptor {
   }
 }
 
+class FakeObjectStorage {
+  async createSignedDownloadUrl(objectKey: string) {
+    return `https://signed.example/${objectKey}`;
+  }
+}
+
 function buildUseCase() {
   const students = new FakeStudentRepository();
   const locations = new FakeLocationRepository();
@@ -86,6 +92,7 @@ function buildUseCase() {
     auditLogs as never,
     new FakeEncryptor(),
     { nowIso: () => "2026-01-01T00:00:00.000Z" },
+    new FakeObjectStorage() as never,
   );
   return { useCase, students, locations, auditLogs };
 }
@@ -203,6 +210,27 @@ describe("StudentUseCases", () => {
     expect(created.nikMasked).toBe("******7890");
   });
 
+  it("creates a student with a photo and returns a signed download URL", async () => {
+    const { useCase, locations } = buildUseCase();
+    locations.locations.push(activeLocation);
+    const created = await useCase.create(admin, {
+      fullName: "New Student",
+      locationId: "location-a",
+      studentPhotoObjectKey: "students/photo-1.jpg",
+    });
+    expect(created.studentPhotoUrl).toBe("https://signed.example/students/photo-1.jpg");
+  });
+
+  it("returns a null photo URL when no photo has been uploaded", async () => {
+    const { useCase, locations } = buildUseCase();
+    locations.locations.push(activeLocation);
+    const created = await useCase.create(admin, {
+      fullName: "New Student",
+      locationId: "location-a",
+    });
+    expect(created.studentPhotoUrl).toBeNull();
+  });
+
   it("rejects create for a non-admin", async () => {
     const { useCase } = buildUseCase();
     await expect(
@@ -250,6 +278,15 @@ describe("StudentUseCases", () => {
     expect(updated.studentPhone).toBe("0811");
     expect(updated.guardianPhone).toBe("0822");
     expect(auditLogs.entries).toHaveLength(1);
+  });
+
+  it("updates a student's photo object key", async () => {
+    const { useCase, students } = buildUseCase();
+    students.students.push(makeStudent("s1"));
+    const updated = await useCase.update(admin, "s1", {
+      studentPhotoObjectKey: "students/photo-2.jpg",
+    });
+    expect(updated.studentPhotoUrl).toBe("https://signed.example/students/photo-2.jpg");
   });
 
   it("clears the NIK when updated to null", async () => {

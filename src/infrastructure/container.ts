@@ -125,6 +125,7 @@ export async function buildContainer(): Promise<Container> {
       auditLogRepository,
       fieldEncryptor,
       clock,
+      objectStorage,
     ),
     assessmentUseCases: new AssessmentUseCases(
       assessmentRepository,
@@ -147,6 +148,8 @@ export async function buildContainer(): Promise<Container> {
       studentRepository,
       clock,
       objectStorage,
+      dailyTargetRepository,
+      quranRepository,
     ),
     fileUseCases: new FileUseCases(objectStorage),
     ikhtibarUseCases: new IkhtibarUseCases(

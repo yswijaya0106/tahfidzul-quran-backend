@@ -9,6 +9,7 @@ import { PageRequest, ListResult } from "../../shared/pagination";
 import { AuthContext, assertAdmin, assertLocationScope } from "../authz/authContext";
 import { Clock } from "../auth/ports";
 import { FieldEncryptor } from "./ports";
+import { ObjectStorage } from "../files/ports";
 
 export interface CreateStudentInput {
   fullName: string;
@@ -20,6 +21,7 @@ export interface CreateStudentInput {
   address?: string | null;
   studentPhone?: string | null;
   guardianPhone?: string | null;
+  studentPhotoObjectKey?: string | null;
 }
 
 export interface UpdateStudentInput {
@@ -31,14 +33,25 @@ export interface UpdateStudentInput {
   address?: string | null;
   studentPhone?: string | null;
   guardianPhone?: string | null;
+  studentPhotoObjectKey?: string | null;
 }
 
-export type PublicStudent = Omit<Student, "nikEncrypted"> & { nikMasked: string | null };
+export type PublicStudent = Omit<Student, "nikEncrypted"> & {
+  nikMasked: string | null;
+  studentPhotoUrl: string | null;
+};
 
-function toPublicStudent(student: Student, encryptor: FieldEncryptor): PublicStudent {
+async function toPublicStudent(
+  student: Student,
+  encryptor: FieldEncryptor,
+  objectStorage: ObjectStorage,
+): Promise<PublicStudent> {
   const { nikEncrypted, ...rest } = student;
   const nikPlain = nikEncrypted ? encryptor.decrypt(nikEncrypted) : null;
-  return { ...rest, nikMasked: maskNik(nikPlain) };
+  const studentPhotoUrl = student.studentPhotoObjectKey
+    ? await objectStorage.createSignedDownloadUrl(student.studentPhotoObjectKey)
+    : null;
+  return { ...rest, nikMasked: maskNik(nikPlain), studentPhotoUrl };
 }
 
 async function generateStudentCode(locationId: string): Promise<string> {
@@ -55,6 +68,7 @@ export class StudentUseCases {
     private readonly auditLogs: AuditLogRepository,
     private readonly encryptor: FieldEncryptor,
     private readonly clock: Clock,
+    private readonly objectStorage: ObjectStorage,
   ) {}
 
   private async assertValidAngkatan(
@@ -84,7 +98,11 @@ export class StudentUseCases {
       auth.role === "ADMIN" ? filters : { ...filters, locationIds: auth.assignedLocationIds };
     const result = await this.students.list(scoped, page);
     return {
-      data: result.data.map((student) => toPublicStudent(student, this.encryptor)),
+      data: await Promise.all(
+        result.data.map((student) =>
+          toPublicStudent(student, this.encryptor, this.objectStorage),
+        ),
+      ),
       meta: result.meta,
     };
   }
@@ -93,7 +111,7 @@ export class StudentUseCases {
     const student = await this.students.findById(id);
     if (!student || student.deletedAt) throw AppError.notFound("Student not found.");
     assertLocationScope(auth, student.locationId);
-    return toPublicStudent(student, this.encryptor);
+    return toPublicStudent(student, this.encryptor, this.objectStorage);
   }
 
   /** Internal accessor for other use cases (e.g. assessments) needing the raw entity. */
@@ -129,7 +147,7 @@ export class StudentUseCases {
       address: input.address ?? null,
       studentPhone: input.studentPhone ?? null,
       guardianPhone: input.guardianPhone ?? null,
-      studentPhotoObjectKey: null,
+      studentPhotoObjectKey: input.studentPhotoObjectKey ?? null,
       idCardPhotoObjectKey: null,
       graduationCertificateObjectKey: null,
       status: "ACTIVE",
@@ -139,7 +157,7 @@ export class StudentUseCases {
     };
 
     await this.students.create(student);
-    return toPublicStudent(student, this.encryptor);
+    return toPublicStudent(student, this.encryptor, this.objectStorage);
   }
 
   async update(auth: AuthContext, id: string, input: UpdateStudentInput): Promise<PublicStudent> {
@@ -163,6 +181,9 @@ export class StudentUseCases {
     if (input.address !== undefined) patch.address = input.address;
     if (input.studentPhone !== undefined) patch.studentPhone = input.studentPhone;
     if (input.guardianPhone !== undefined) patch.guardianPhone = input.guardianPhone;
+    if (input.studentPhotoObjectKey !== undefined) {
+      patch.studentPhotoObjectKey = input.studentPhotoObjectKey;
+    }
 
     await this.students.update(id, patch);
 
@@ -177,7 +198,7 @@ export class StudentUseCases {
     });
 
     const updated = await this.students.findById(id);
-    return toPublicStudent(updated!, this.encryptor);
+    return toPublicStudent(updated!, this.encryptor, this.objectStorage);
   }
 
   async archive(auth: AuthContext, id: string): Promise<void> {
