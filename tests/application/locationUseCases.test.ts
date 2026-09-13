@@ -43,12 +43,25 @@ class FakeAuditLogRepository {
   }
 }
 
+const fakeObjectStorage = {
+  createPresignedUpload: async () => ({
+    objectKey: "key",
+    uploadUrl: "https://example.com/upload",
+    expiresAt: "2026-01-01T00:00:00.000Z",
+  }),
+  createSignedDownloadUrl: async (objectKey: string) => `https://example.com/${objectKey}`,
+  headObject: async () => null,
+};
+
 function buildUseCase() {
   const locations = new FakeLocationRepository();
   const auditLogs = new FakeAuditLogRepository();
-  const useCase = new LocationUseCases(locations as never, auditLogs as never, {
-    nowIso: () => "2026-01-01T00:00:00.000Z",
-  });
+  const useCase = new LocationUseCases(
+    locations as never,
+    auditLogs as never,
+    { nowIso: () => "2026-01-01T00:00:00.000Z" },
+    fakeObjectStorage as never,
+  );
   return { useCase, locations, auditLogs };
 }
 
@@ -216,6 +229,8 @@ function makeLocation(id: string, name = "Location"): Location {
     kabKota: null,
     kecamatan: null,
     kodePos: null,
+    provinceId: null,
+    cityId: null,
     latitude: null,
     longitude: null,
     phone: null,

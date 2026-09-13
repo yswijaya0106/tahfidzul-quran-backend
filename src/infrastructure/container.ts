@@ -117,7 +117,12 @@ export async function buildContainer(): Promise<Container> {
       passwordHasher,
       clock,
     ),
-    locationUseCases: new LocationUseCases(locationRepository, auditLogRepository, clock),
+    locationUseCases: new LocationUseCases(
+      locationRepository,
+      auditLogRepository,
+      clock,
+      objectStorage,
+    ),
     studentUseCases: new StudentUseCases(
       studentRepository,
       locationRepository,

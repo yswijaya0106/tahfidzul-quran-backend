@@ -112,6 +112,8 @@ const activeLocation: Location = {
   kabKota: null,
   kecamatan: null,
   kodePos: null,
+  provinceId: null,
+  cityId: null,
   latitude: null,
   longitude: null,
   phone: null,

@@ -78,7 +78,8 @@ describe("locations routes", () => {
       headers: authHeader(ctx.adminToken),
       payload: {
         name,
-        address: "Jl. Contoh No. 1, Kelurahan Contoh, Kecamatan Contoh, Kota Contoh, Jawa Barat 40123",
+        address:
+          "Jl. Contoh No. 1, Kelurahan Contoh, Kecamatan Contoh, Kota Contoh, Jawa Barat 40123",
         provinsi: "Jawa Barat",
         kabKota: "Kota Contoh",
         kecamatan: "Kecamatan Contoh",
@@ -103,6 +104,43 @@ describe("locations routes", () => {
     expect(patchRes.statusCode).toBe(200);
     expect(patchRes.json().data.kodePos).toBe("40199");
     expect(patchRes.json().data.provinsi).toBe("Jawa Barat");
+  });
+
+  it("creates and updates a location with ref_province/ref_city ids and a cover photo", async () => {
+    const name = `RefData Location ${uuid()}`;
+    const createRes = await ctx.app.inject({
+      method: "POST",
+      url: "/api/v1/locations",
+      headers: authHeader(ctx.adminToken),
+      payload: {
+        name,
+        address: "Jl. Contoh No. 2",
+        provinceId: 1,
+        cityId: 1,
+        coverPhotoObjectKey: "locations/cover-1.jpg",
+      },
+    });
+    expect(createRes.statusCode).toBe(201);
+    const location = createRes.json().data;
+    expect(location).toMatchObject({ provinceId: 1, cityId: 1 });
+    expect(location.coverPhotoUrl).toContain("locations/cover-1.jpg");
+
+    const patchRes = await ctx.app.inject({
+      method: "PATCH",
+      url: `/api/v1/locations/${location.id}`,
+      headers: authHeader(ctx.adminToken),
+      payload: { cityId: 2, coverPhotoObjectKey: "locations/cover-2.jpg" },
+    });
+    expect(patchRes.statusCode).toBe(200);
+    expect(patchRes.json().data).toMatchObject({ provinceId: 1, cityId: 2 });
+    expect(patchRes.json().data.coverPhotoUrl).toContain("locations/cover-2.jpg");
+
+    const getRes = await ctx.app.inject({
+      method: "GET",
+      url: `/api/v1/locations/${location.id}`,
+      headers: authHeader(ctx.adminToken),
+    });
+    expect(getRes.json().data).toMatchObject({ provinceId: 1, cityId: 2 });
   });
 
   it("rejects create/update/delete for a non-admin operator", async () => {

@@ -28,6 +28,8 @@ function makeLocation(overrides: Partial<Location> = {}): Location {
     kabKota: null,
     kecamatan: null,
     kodePos: null,
+    provinceId: null,
+    cityId: null,
     latitude: -6.2,
     longitude: 106.8,
     phone: null,

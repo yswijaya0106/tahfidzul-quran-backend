@@ -16,10 +16,13 @@ const createLocationSchema = z.object({
   kabKota: z.string().max(100).nullish(),
   kecamatan: z.string().max(100).nullish(),
   kodePos: z.string().max(10).nullish(),
+  provinceId: z.number().int().nullish(),
+  cityId: z.number().int().nullish(),
   latitude: z.number().nullish(),
   longitude: z.number().nullish(),
   phone: z.string().max(32).nullish(),
   description: z.string().nullish(),
+  coverPhotoObjectKey: z.string().min(1).nullish(),
   organizationMembers: z.array(memberSchema).optional(),
 });
 

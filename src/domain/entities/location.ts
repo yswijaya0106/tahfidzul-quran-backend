@@ -16,6 +16,8 @@ export interface Location {
   kabKota: string | null;
   kecamatan: string | null;
   kodePos: string | null;
+  provinceId: number | null;
+  cityId: number | null;
   latitude: number | null;
   longitude: number | null;
   phone: string | null;
